@@ -1,39 +1,29 @@
 {
-  "name": "claude-glass",
-  "version": "1.2.1",
-  "description": "Glassmorphism desktop widget for monitoring Claude usage on Windows",
-  "main": "main.js",
+  "name": "pacer",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
   "scripts": {
-    "start": "electron .",
-    "test": "npm run test:parity && npm run test:smoke",
-    "test:parity": "node test/bridge-parity.js",
-    "test:smoke": "node test/smoke/run.js",
-    "dist:win": "npx electron-builder --win zip"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "test": "vitest run"
   },
-  "author": "Vitória Silva — Data System",
-  "license": "MIT",
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2"
+  },
   "devDependencies": {
-    "electron": "^42.8.0",
-    "electron-builder": "^26.15.3"
-  },
-  "build": {
-    "appId": "com.datasystem.claude-glass",
-    "productName": "Claude Glass",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "main.js",
-      "preload.js",
-      "usage.js",
-      "auth.js",
-      "config.json",
-      "renderer/**",
-      "assets/**"
-    ],
-    "win": {
-      "target": "zip",
-      "icon": "assets/icon.ico"
-    }
+    "@tauri-apps/cli": "^2",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^5.0.3"
   }
 }

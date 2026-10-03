@@ -1,17 +1,32 @@
-node_modules/
-dist/
+# Logs
+logs
 *.log
-.DS_Store
-Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Credenciais. Normalmente o token fica FORA do projeto, em
-# %USERPROFILE%\.claude-usage-monitor\auth.json — mas o auth.js respeita a
-# variavel CLAUDE_CONFIG_DIR, e se ela apontar para ca o arquivo nasce dentro
-# do repositorio. Estas linhas garantem que ele nunca seja commitado.
-auth.json
-**/auth.json
-usage-monitor/
-.claude-usage-monitor/
-.claude-glass/
-.env
-.env.*
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Pacer
+dist-ui/
+src-tauri/target/
+src-tauri/gen/schemas/
+.superpowers/
+*.pfx
+.vs/
