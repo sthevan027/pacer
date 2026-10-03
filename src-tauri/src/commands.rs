@@ -43,17 +43,11 @@ pub fn hide_window(window: WebviewWindow) {
     let _ = window.hide();
 }
 
-/// Aplica efeitos colaterais da config (início com o Windows; trava na Task 11).
+/// Aplica efeitos colaterais da config (início com o Windows).
 pub fn apply_config(app: &AppHandle, cfg: &Config) {
     if !cfg!(debug_assertions) {
         use tauri_plugin_autostart::ManagerExt;
         let launcher = app.autolaunch();
         let _ = if cfg.start_with_windows { launcher.enable() } else { launcher.disable() };
-    }
-    if cfg.lock_position {
-        use tauri::Manager;
-        if let Some(w) = app.get_webview_window("main") {
-            crate::window::anchor(&w);
-        }
     }
 }

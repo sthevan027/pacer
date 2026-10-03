@@ -59,7 +59,7 @@ src-tauri/src/
       logs.rs          lê ~/.claude/projects/**/*.jsonl → atividade 30 dias
   pacing.rs            projeção do ritmo até a redefinição
   scheduler.rs         ciclos de busca, backoff, cache do último Snapshot
-  window.rs            posição, trava acima da taskbar, acrílico, esconder
+  window.rs            canto sup. direito, fundo da área de trabalho, acrílico, altura
   tray.rs              ícone colorido por severidade + menu
   alerts.rs            notificações por limiar e por previsão estourando
   config.rs            leitura/gravação segura da configuração
@@ -171,11 +171,12 @@ Interruptores com efeito mola; seletor com pílula deslizante.
   laranja com a idade do dado e a próxima tentativa.
 
 ### Janela e bandeja
-- Sem borda, transparente + acrílico, sempre por cima, fora da taskbar.
-- Ancorada no canto inferior direito acima da taskbar; arrastável pela área
-  do cabeçalho; opção de travar; nunca fica sob a taskbar.
-- Bandeja: ícone colorido pela maior severidade; clique esquerdo
-  mostra/esconde; menu direito: Atualizar agora, Configurações, Sair.
+- **Widget fixo na área de trabalho** (mudança de 2026-10-03, pedida pelo Sthevan depois do
+  mockup): sem borda, transparente + acrílico, fora da taskbar, **no fundo** (atrás de todas as
+  janelas, nunca sobrepõe nada) e **fixo no canto superior direito** da área útil do monitor
+  (cresce para baixo). Não é arrastável e não há opção de travar.
+- Bandeja: ícone colorido pela maior severidade; clique esquerdo **traz o widget para a frente**
+  e ele volta ao fundo quando perde o foco; menu direito: Atualizar agora, Configurações, Sair.
 - Fechar = esconder.
 
 ## 6. Configuração
@@ -186,7 +187,6 @@ mesmo se o nome mudar):
 ```json
 {
   "startWithWindows": true,
-  "lockPosition": false,
   "refreshMinutes": 5,
   "alerts": { "enabled": true, "thresholds": [80, 95], "pace": true },
   "providers": { "claude": { "enabled": true } }

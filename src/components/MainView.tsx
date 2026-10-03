@@ -14,7 +14,6 @@ export function MainView({ state, now, onSettings }: { state: AppState; now: num
       <Header
         title="Pacer"
         sub="Uso dos planos de IA"
-        draggable={!state.config.lockPosition}
         actions={
           <>
             <button className="ib" title="Atualizar agora" onClick={() => invoke("refresh_now")}>

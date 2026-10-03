@@ -42,8 +42,7 @@ pub fn render_icon(pct: f64, sev: Severity) -> Vec<u8> {
 
 pub fn show_main(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
-        let _ = w.show();
-        let _ = w.set_focus();
+        crate::window::peek(&w);
     }
 }
 

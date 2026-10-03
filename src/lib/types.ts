@@ -41,7 +41,6 @@ export interface AlertsConfig {
 
 export interface Config {
   startWithWindows: boolean;
-  lockPosition: boolean;
   refreshMinutes: number;
   alerts: AlertsConfig;
   providers: { claude: { enabled: boolean } };

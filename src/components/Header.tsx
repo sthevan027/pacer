@@ -3,15 +3,13 @@ import type { ReactNode } from "react";
 interface Props {
   title: string;
   sub?: string;
-  draggable: boolean;
   leading?: ReactNode;
   actions?: ReactNode;
 }
 
-export function Header({ title, sub, draggable, leading, actions }: Props) {
-  const drag = draggable ? { "data-tauri-drag-region": "" } : {};
+export function Header({ title, sub, leading, actions }: Props) {
   return (
-    <header className="top" {...drag}>
+    <header className="top">
       {leading}
       <h4>
         {title}

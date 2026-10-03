@@ -21,7 +21,6 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
     <>
       <Header
         title="Configurações"
-        draggable={!cfg.lockPosition}
         leading={
           <button className="ib" title="Voltar" onClick={onBack}>
             <Icon name="back" />
@@ -37,9 +36,6 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
         </div>
         <Row label="Iniciar com o Windows" hint="Abre sozinho ao ligar o PC">
           <Toggle label="Iniciar com o Windows" on={cfg.startWithWindows} onChange={(v) => save({ startWithWindows: v })} />
-        </Row>
-        <Row label="Travar acima da barra" hint="Fixa no canto, sem arrastar">
-          <Toggle label="Travar acima da barra" on={cfg.lockPosition} onChange={(v) => save({ lockPosition: v })} />
         </Row>
         <Row label="Atualizar a cada">
           <Segmented value={cfg.refreshMinutes} options={REFRESH_OPTIONS} format={(v) => `${v}m`} onChange={(v) => save({ refreshMinutes: v })} />

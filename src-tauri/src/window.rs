@@ -11,14 +11,17 @@ pub struct Rect {
 pub const MARGIN: f64 = 12.0;
 pub const WIDTH: f64 = 300.0;
 
-pub fn anchored(area: Rect, w: i32, h: i32, margin: i32) -> (i32, i32) {
-    (area.x + area.w - w - margin, area.y + area.h - h - margin)
+const MIN_HEIGHT: f64 = 160.0;
+
+/// Canto superior direito da área útil (já descontada a barra de tarefas, esteja ela onde estiver).
+pub fn anchored_top_right(area: Rect, w: i32, margin: i32) -> (i32, i32) {
+    (area.x + area.w - w - margin, area.y + margin)
 }
 
-pub fn clamp(area: Rect, x: i32, y: i32, w: i32, h: i32) -> (i32, i32) {
-    let max_x = (area.x + area.w - w).max(area.x);
-    let max_y = (area.y + area.h - h).max(area.y);
-    (x.clamp(area.x, max_x), y.clamp(area.y, max_y))
+/// Altura (px lógicos) que cabe na área útil do monitor, com margem em cima e embaixo.
+pub fn fit_height(requested: f64, area_h_px: i32, scale: f64) -> f64 {
+    let max = (f64::from(area_h_px) / scale - 2.0 * MARGIN).max(MIN_HEIGHT);
+    requested.clamp(MIN_HEIGHT, max)
 }
 
 fn work_area(win: &WebviewWindow) -> Option<Rect> {
@@ -31,21 +34,27 @@ fn work_area(win: &WebviewWindow) -> Option<Rect> {
     Some(Rect { x: wa.position.x, y: wa.position.y, w: wa.size.width as i32, h: wa.size.height as i32 })
 }
 
-/// Cola no canto inferior direito da área útil do monitor atual.
+/// Cola no canto superior direito da área útil do monitor atual. Só mexe se estiver fora do
+/// lugar (reposicionar no mesmo ponto dispararia `Moved` de novo e entraria em laço).
 pub fn anchor(win: &WebviewWindow) {
-    let (Some(area), Ok(size)) = (work_area(win), win.outer_size()) else { return };
+    let (Some(area), Ok(size), Ok(pos)) = (work_area(win), win.outer_size(), win.outer_position()) else { return };
     let margin = (MARGIN * win.scale_factor().unwrap_or(1.0)).round() as i32;
-    let (x, y) = anchored(area, size.width as i32, size.height as i32, margin);
-    let _ = win.set_position(PhysicalPosition::new(x, y));
-}
-
-/// Nunca deixa a janela ficar fora da área útil (sob a taskbar ou fora da tela).
-pub fn keep_inside(win: &WebviewWindow) {
-    let (Some(area), Ok(pos), Ok(size)) = (work_area(win), win.outer_position(), win.outer_size()) else { return };
-    let (x, y) = clamp(area, pos.x, pos.y, size.width as i32, size.height as i32);
+    let (x, y) = anchored_top_right(area, size.width as i32, margin);
     if (x, y) != (pos.x, pos.y) {
         let _ = win.set_position(PhysicalPosition::new(x, y));
     }
+}
+
+/// Fica no fundo da área de trabalho, atrás de todas as janelas.
+pub fn sink(win: &WebviewWindow) {
+    let _ = win.set_always_on_bottom(true);
+}
+
+/// Traz pra frente (clique no ícone da bandeja). Volta ao fundo sozinho quando perde o foco.
+pub fn peek(win: &WebviewWindow) {
+    let _ = win.set_always_on_bottom(false);
+    let _ = win.show();
+    let _ = win.set_focus();
 }
 
 /// Acrílico do Windows 11; se falhar, o CSS já tem fundo próprio.
@@ -56,17 +65,16 @@ pub fn apply_effects(win: &WebviewWindow) {
     }
 }
 
-/// O frontend informa a altura do conteúdo; a janela cresce para cima (base fixa).
+/// O frontend informa a altura do conteúdo; a janela cresce para baixo (topo fixo no canto).
 #[tauri::command]
 pub fn set_window_height(window: WebviewWindow, height: f64) -> Result<(), String> {
-    let height = height.clamp(160.0, 900.0);
-    let old_pos = window.outer_position().map_err(|e| e.to_string())?;
-    let old_size = window.outer_size().map_err(|e| e.to_string())?;
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let height = match work_area(&window) {
+        Some(area) => fit_height(height, area.h, scale),
+        None => height.clamp(MIN_HEIGHT, 900.0),
+    };
     window.set_size(LogicalSize::new(WIDTH, height)).map_err(|e| e.to_string())?;
-    let new_size = window.outer_size().map_err(|e| e.to_string())?;
-    let bottom = old_pos.y + old_size.height as i32;
-    let _ = window.set_position(PhysicalPosition::new(old_pos.x, bottom - new_size.height as i32));
-    keep_inside(&window);
+    anchor(&window);
     Ok(())
 }
 
@@ -75,33 +83,30 @@ mod tests {
     use super::*;
 
     const W: i32 = 300;
-    const H: i32 = 520;
 
     #[test]
-    fn anchors_bottom_right_above_bottom_taskbar() {
+    fn anchors_top_right_with_bottom_taskbar() {
         let area = Rect { x: 0, y: 0, w: 1920, h: 1032 }; // taskbar de 48px embaixo
-        assert_eq!(anchored(area, W, H, 12), (1920 - 300 - 12, 1032 - 520 - 12));
+        assert_eq!(anchored_top_right(area, W, 12), (1920 - 300 - 12, 12));
     }
 
     #[test]
-    fn respects_top_taskbar_and_offset_monitor() {
+    fn anchors_top_right_below_a_top_taskbar_and_on_offset_monitors() {
         let top_bar = Rect { x: 0, y: 48, w: 1920, h: 1032 };
-        assert_eq!(anchored(top_bar, W, H, 12), (1608, 48 + 1032 - 520 - 12));
+        assert_eq!(anchored_top_right(top_bar, W, 12), (1608, 48 + 12));
         let second = Rect { x: 1920, y: -200, w: 1280, h: 984 };
-        assert_eq!(anchored(second, W, H, 12), (1920 + 1280 - 312, -200 + 984 - 532));
+        assert_eq!(anchored_top_right(second, W, 12), (1920 + 1280 - 312, -200 + 12));
     }
 
     #[test]
-    fn clamp_pulls_window_back_inside() {
-        let area = Rect { x: 0, y: 0, w: 1920, h: 1032 };
-        assert_eq!(clamp(area, 1800, 900, W, H), (1620, 512));
-        assert_eq!(clamp(area, -50, -10, W, H), (0, 0));
-        assert_eq!(clamp(area, 100, 100, W, H), (100, 100));
-    }
-
-    #[test]
-    fn clamp_handles_window_bigger_than_area() {
-        let area = Rect { x: 10, y: 10, w: 200, h: 200 };
-        assert_eq!(clamp(area, 50, 50, W, H), (10, 10));
+    fn fit_height_stays_inside_the_work_area() {
+        assert_eq!(fit_height(540.0, 1032, 1.0), 540.0);
+        // conteúdo maior que a tela: sobra a margem em cima e embaixo
+        assert_eq!(fit_height(900.0, 600, 1.0), 600.0 - 2.0 * MARGIN);
+        // com escala 150% a área útil tem menos pixels lógicos
+        assert_eq!(fit_height(900.0, 600, 1.5), 600.0 / 1.5 - 2.0 * MARGIN);
+        // nunca encolhe abaixo do mínimo
+        assert_eq!(fit_height(50.0, 1032, 1.0), 160.0);
+        assert_eq!(fit_height(900.0, 100, 1.0), 160.0);
     }
 }

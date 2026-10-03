@@ -26,13 +26,17 @@ pub fn run() {
             let win = app.get_webview_window("main").expect("janela main");
             window::apply_effects(&win);
             window::anchor(&win);
+            window::sink(&win);
             let w = win.clone();
             win.on_window_event(move |e| match e {
                 WindowEvent::CloseRequested { api, .. } => {
                     api.prevent_close();
                     let _ = w.hide();
                 }
-                WindowEvent::Moved(_) => window::keep_inside(&w),
+                // widget fixo: se algo o tirar do canto (mudança de monitor/resolução), volta
+                WindowEvent::Moved(_) | WindowEvent::ScaleFactorChanged { .. } => window::anchor(&w),
+                // depois de trazido pra frente pela bandeja, volta pro fundo ao clicar em outra coisa
+                WindowEvent::Focused(false) => window::sink(&w),
                 _ => {}
             });
             tray::create(app.handle())?;

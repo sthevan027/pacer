@@ -37,7 +37,6 @@ pub struct ProvidersConfig {
 #[serde(rename_all = "camelCase", default)]
 pub struct Config {
     pub start_with_windows: bool,
-    pub lock_position: bool,
     pub refresh_minutes: u32,
     pub alerts: AlertsConfig,
     pub providers: ProvidersConfig,
@@ -47,7 +46,6 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             start_with_windows: true,
-            lock_position: false,
             refresh_minutes: 5,
             alerts: AlertsConfig::default(),
             providers: ProvidersConfig::default(),
@@ -110,7 +108,7 @@ mod tests {
         assert_eq!(c, Config::default());
         assert_eq!(c.refresh_minutes, 5);
         assert_eq!(c.alerts.thresholds, vec![80, 95]);
-        assert!(c.start_with_windows && !c.lock_position && c.providers.claude.enabled);
+        assert!(c.start_with_windows && c.providers.claude.enabled);
     }
 
     #[test]
@@ -149,13 +147,24 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path().join("sub").join("config.json");
         let mut c = Config::default();
-        c.lock_position = true;
         c.refresh_minutes = 1;
         save(&p, &c).unwrap();
         assert_eq!(load(&p), c);
         assert!(!dir.path().join("sub").join("config.json.tmp").exists());
         let raw = fs::read_to_string(&p).unwrap();
-        assert!(raw.contains("\"lockPosition\": true"));
+        assert!(raw.contains("\"refreshMinutes\": 1"));
+        // o widget agora é fixo no canto: não existe mais "travar posição"
+        assert!(!raw.contains("lockPosition"));
+    }
+
+    #[test]
+    fn old_config_with_lock_position_still_loads() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        fs::write(&p, r#"{"lockPosition":true,"refreshMinutes":10}"#).unwrap();
+        let c = load(&p);
+        assert_eq!(c.refresh_minutes, 10);
+        assert!(p.exists(), "campo antigo não pode contar como arquivo corrompido");
     }
 
     #[test]
