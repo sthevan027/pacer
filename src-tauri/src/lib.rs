@@ -1,3 +1,4 @@
+pub mod alerts;
 pub mod config;
 pub mod pacing;
 pub mod providers;
@@ -6,6 +7,7 @@ pub mod snapshot;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             use tauri::Manager;
             app.get_webview_window("main").expect("janela main").show()?;
