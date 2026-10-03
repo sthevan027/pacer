@@ -50,4 +50,10 @@ pub fn apply_config(app: &AppHandle, cfg: &Config) {
         let launcher = app.autolaunch();
         let _ = if cfg.start_with_windows { launcher.enable() } else { launcher.disable() };
     }
+    if cfg.lock_position {
+        use tauri::Manager;
+        if let Some(w) = app.get_webview_window("main") {
+            crate::window::anchor(&w);
+        }
+    }
 }
