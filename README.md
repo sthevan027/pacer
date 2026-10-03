@@ -29,8 +29,8 @@ Widget para Windows que mostra quanto do seu plano de IA você já usou — e
 ## Instalação
 
 Baixe o instalador em [Releases](https://github.com/sthevan027/Claude-Glass/releases)
-e execute. O executável é assinado com um certificado interno (Virex); o
-Windows pode mostrar "Windows protegeu o computador" → **Mais informações →
+e execute. A versão 2.0.0 ainda **não é assinada** (a assinatura com o certificado
+interno da Virex volta numa próxima versão); por isso o Windows pode mostrar "Windows protegeu o computador" → **Mais informações →
 Executar assim mesmo**.
 
 ### Rodar do código

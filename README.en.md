@@ -33,8 +33,8 @@ A Windows widget that shows how much of your AI plan you've already used — and
 ## Install
 
 Download the installer from [Releases](https://github.com/sthevan027/Claude-Glass/releases)
-and run it. The executable is signed with an internal (Virex) certificate, so
-Windows may show "Windows protected your PC" → **More info → Run anyway**.
+and run it. Version 2.0.0 is **not signed yet** (signing with the internal Virex
+certificate comes back in a later release), so Windows may show "Windows protected your PC" → **More info → Run anyway**.
 
 ### Run from source
 
