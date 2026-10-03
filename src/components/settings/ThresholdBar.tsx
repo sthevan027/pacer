@@ -1,5 +1,6 @@
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import { Icon } from "../../icons/icons";
+import { moveThreshold } from "../../lib/thresholds";
 
 export function ThresholdBar({ values, onChange }: { values: number[]; onChange: (v: number[]) => void }) {
   const [local, setLocal] = useState(values);
@@ -13,8 +14,7 @@ export function ThresholdBar({ values, onChange }: { values: number[]; onChange:
     let current = local;
     const move = (ev: PointerEvent) => {
       const r = bar.current!.getBoundingClientRect();
-      const v = Math.round(Math.min(100, Math.max(1, ((ev.clientX - r.left) / r.width) * 100)));
-      current = current.map((x, j) => (j === i ? v : x));
+      current = moveThreshold(current, i, ((ev.clientX - r.left) / r.width) * 100);
       setLocal(current);
     };
     const up = () => {

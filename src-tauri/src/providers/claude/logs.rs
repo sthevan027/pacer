@@ -240,4 +240,20 @@ mod tests {
         fs::remove_file(&b_path).unwrap();
         assert_eq!(s.scan(d.path(), now()).today_tokens, 15);
     }
+
+    #[test]
+    fn sees_appends_while_the_file_handle_is_still_open() {
+        let d = tempfile::tempdir().unwrap();
+        let p = d.path().join("a.jsonl");
+        // o Claude Code mantém o arquivo da sessão aberto enquanto escreve
+        let mut f = fs::OpenOptions::new().create(true).append(true).open(&p).unwrap();
+        writeln!(f, "{}", line("2026-10-03T12:00:00Z", "m1", "r1", 10)).unwrap();
+        f.flush().unwrap();
+        let mut s = LogScanner::new();
+        assert_eq!(s.scan(d.path(), now()).today_tokens, 10);
+
+        writeln!(f, "{}", line("2026-10-03T13:00:00Z", "m2", "r2", 5)).unwrap();
+        f.flush().unwrap();
+        assert_eq!(s.scan(d.path(), now()).today_tokens, 15);
+    }
 }

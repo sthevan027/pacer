@@ -3,6 +3,9 @@ use crate::snapshot::Snapshot;
 use chrono::{DateTime, Utc};
 use std::collections::HashSet;
 
+/// Projeção (% na redefinição) abaixo da qual o alerta de previsão volta a poder disparar.
+const PACE_REARM_BELOW: f64 = 95.0;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Alert {
     pub title: String,
@@ -48,8 +51,14 @@ impl AlertState {
                             });
                         }
                     }
+                    // Histerese: entre buscas o uso fica parado e o relógio corre, então o limite
+                    // projetado "foge" para depois da redefinição sem o ritmo ter melhorado. Só
+                    // rearma quando a projeção cai bem abaixo de 100% (ou some, ex.: janela nova).
                     None => {
-                        self.armed.remove(&key);
+                        let calm = w.pace.as_ref().is_none_or(|p| p.projected_pct < PACE_REARM_BELOW);
+                        if calm {
+                            self.armed.remove(&key);
+                        }
                     }
                 }
             }
@@ -162,5 +171,31 @@ mod tests {
         assert_eq!(human_duration(Duration::minutes(14)), "14m");
         assert_eq!(human_duration(Duration::seconds(20)), "menos de 1m");
         assert_eq!(human_duration(Duration::minutes(-5)), "menos de 1m");
+    }
+
+    #[test]
+    fn pace_alert_does_not_refire_while_projection_stays_high() {
+        let mut st = AlertState::default();
+        let mut c = cfg();
+        c.pace = true;
+        let soon = Pace { projected_pct: 130.0, limit_at: Some(now() + Duration::minutes(90)) };
+        assert_eq!(st.evaluate(&snap(50.0, Some(soon.clone())), &c, now()).len(), 1);
+        // entre buscas o uso fica parado e o tempo corre: o limite projetado passa da redefinição
+        let drifted = Pace { projected_pct: 104.0, limit_at: Some(now() + Duration::hours(4)) };
+        assert!(st.evaluate(&snap(50.0, Some(drifted)), &c, now()).is_empty());
+        // nova busca volta a estourar antes da redefinição — mesma situação, não avisa de novo
+        assert!(st.evaluate(&snap(52.0, Some(soon)), &c, now()).is_empty());
+    }
+
+    #[test]
+    fn pace_alert_rearms_after_projection_drops_well_below_limit() {
+        let mut st = AlertState::default();
+        let mut c = cfg();
+        c.pace = true;
+        let soon = Pace { projected_pct: 130.0, limit_at: Some(now() + Duration::minutes(90)) };
+        assert_eq!(st.evaluate(&snap(50.0, Some(soon.clone())), &c, now()).len(), 1);
+        let calm = Pace { projected_pct: 80.0, limit_at: None };
+        assert!(st.evaluate(&snap(40.0, Some(calm)), &c, now()).is_empty());
+        assert_eq!(st.evaluate(&snap(50.0, Some(soon)), &c, now()).len(), 1);
     }
 }

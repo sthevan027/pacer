@@ -44,6 +44,28 @@ impl Backoff {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FetchPlan {
+    /// Ainda não é hora e ninguém pediu.
+    Wait,
+    /// Pode buscar agora.
+    Now,
+    /// Pediram/venceu, mas a última busca foi há menos de 60 s: busca quando o intervalo mínimo acabar.
+    Defer(DateTime<Utc>),
+}
+
+/// Decide se o provedor busca agora, depois ou nada. Um pedido forçado dentro do
+/// intervalo mínimo é adiado (não descartado).
+pub fn plan_fetch(forced: bool, now: DateTime<Utc>, next_remote: DateTime<Utc>, last_remote: Option<DateTime<Utc>>) -> FetchPlan {
+    if !(forced || now >= next_remote) {
+        return FetchPlan::Wait;
+    }
+    match last_remote {
+        Some(last) if now - last < MIN_GAP => FetchPlan::Defer(last + MIN_GAP),
+        _ => FetchPlan::Now,
+    }
+}
+
 struct Slot {
     provider: Box<dyn Provider>,
     backoff: Backoff,
@@ -80,12 +102,15 @@ pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
                     continue;
                 }
                 s.provider.tick_local(now);
-                let gap_ok = s.last_remote.is_none_or(|t| now - t >= MIN_GAP);
-                if (forced || now >= s.next_remote) && gap_ok {
-                    let r = s.provider.fetch_remote(now).await;
-                    s.backoff.record(r);
-                    s.last_remote = Some(now);
-                    s.next_remote = now + chrono::Duration::from_std(s.backoff.delay()).unwrap();
+                match plan_fetch(forced, now, s.next_remote, s.last_remote) {
+                    FetchPlan::Now => {
+                        let r = s.provider.fetch_remote(now).await;
+                        s.backoff.record(r);
+                        s.last_remote = Some(now);
+                        s.next_remote = now + chrono::Duration::from_std(s.backoff.delay()).unwrap();
+                    }
+                    FetchPlan::Defer(until) => s.next_remote = s.next_remote.min(until),
+                    FetchPlan::Wait => {}
                 }
                 let mut snap = s.provider.snapshot();
                 snap.next_refresh_at = Some(s.next_remote);
@@ -150,5 +175,31 @@ mod tests {
         b.record(FetchResult::RateLimited);
         b.set_refresh_minutes(1);
         assert_eq!(b.delay(), MIN);
+    }
+
+    fn t(secs: i64) -> DateTime<Utc> {
+        chrono::TimeZone::timestamp_opt(&Utc, 1_790_000_000 + secs, 0).unwrap()
+    }
+
+    #[test]
+    fn waits_when_not_due_and_not_forced() {
+        assert_eq!(plan_fetch(false, t(100), t(300), Some(t(0))), FetchPlan::Wait);
+    }
+
+    #[test]
+    fn fetches_when_due() {
+        assert_eq!(plan_fetch(false, t(300), t(300), Some(t(0))), FetchPlan::Now);
+        assert_eq!(plan_fetch(false, t(0), t(0), None), FetchPlan::Now);
+    }
+
+    #[test]
+    fn forced_after_the_minimum_gap_fetches_now() {
+        assert_eq!(plan_fetch(true, t(90), t(300), Some(t(0))), FetchPlan::Now);
+    }
+
+    #[test]
+    fn forced_inside_the_minimum_gap_is_deferred_not_dropped() {
+        // buscou em t=0, usuário clica "Atualizar agora" em t=30: tem que buscar em t=60, não em t=300
+        assert_eq!(plan_fetch(true, t(30), t(300), Some(t(0))), FetchPlan::Defer(t(60)));
     }
 }
