@@ -28,7 +28,7 @@ Widget para Windows que mostra quanto do seu plano de IA você já usou — e
 
 ## Instalação
 
-Baixe o instalador em [Releases](https://github.com/sthevan027/Claude-Glass/releases)
+Baixe o instalador em [Releases](https://github.com/sthevan027/pacer/releases)
 e execute. A versão 2.0.0 ainda **não é assinada** (a assinatura com o certificado
 interno da Virex volta numa próxima versão); por isso o Windows pode mostrar "Windows protegeu o computador" → **Mais informações →
 Executar assim mesmo**.

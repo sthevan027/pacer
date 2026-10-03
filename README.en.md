@@ -32,7 +32,7 @@ A Windows widget that shows how much of your AI plan you've already used — and
 
 ## Install
 
-Download the installer from [Releases](https://github.com/sthevan027/Claude-Glass/releases)
+Download the installer from [Releases](https://github.com/sthevan027/pacer/releases)
 and run it. Version 2.0.0 is **not signed yet** (signing with the internal Virex
 certificate comes back in a later release), so Windows may show "Windows protected your PC" → **More info → Run anyway**.
 

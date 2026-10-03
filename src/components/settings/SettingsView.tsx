@@ -8,7 +8,7 @@ import { Segmented } from "./Segmented";
 import { ThresholdBar } from "./ThresholdBar";
 import { Toggle } from "./Toggle";
 
-const REPO_URL = "https://github.com/sthevan027/Claude-Glass";
+const REPO_URL = "https://github.com/sthevan027/pacer";
 const REFRESH_OPTIONS = [1, 5, 10] as const;
 
 export function SettingsView({ state, onBack }: { state: AppState; onBack: () => void }) {
