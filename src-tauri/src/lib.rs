@@ -1,3 +1,4 @@
+pub mod pacing;
 pub mod snapshot;
 
 pub fn run() {
