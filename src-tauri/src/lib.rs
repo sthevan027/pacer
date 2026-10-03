@@ -1,5 +1,6 @@
 pub mod config;
 pub mod pacing;
+pub mod providers;
 pub mod snapshot;
 
 pub fn run() {
