@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { MainView } from "./components/MainView";
+import { SettingsView } from "./components/settings/SettingsView";
 import { useAutoHeight, useNow, usePacer } from "./lib/hooks";
 
 type View = "main" | "settings";
@@ -37,7 +38,7 @@ export default function App() {
       ) : view === "main" ? (
         <MainView state={state} now={now} onSettings={() => setView("settings")} />
       ) : (
-        <p className="muted note">Configurações (Task 14)</p>
+        <SettingsView state={state} onBack={() => setView("main")} />
       )}
     </div>
   );
