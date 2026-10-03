@@ -1,3 +1,4 @@
+pub mod config;
 pub mod pacing;
 pub mod snapshot;
 
