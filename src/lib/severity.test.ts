@@ -1,15 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { severity } from "./severity";
+import { severity, usageColor } from "./severity";
 
 describe("severity", () => {
-  it("segue os mesmos limiares do Rust", () => {
-    expect(severity(74.9, null)).toBe("ok");
-    expect(severity(75, null)).toBe("warn");
-    expect(severity(90, null)).toBe("warn");
-    expect(severity(90.1, null)).toBe("critical");
+  it("segue só o uso, com os mesmos limiares do Rust", () => {
+    expect(severity(0)).toBe("ok");
+    expect(severity(69.9)).toBe("ok");
+    expect(severity(70)).toBe("warn");
+    expect(severity(89.9)).toBe("warn");
+    expect(severity(90)).toBe("critical");
+    expect(severity(100)).toBe("critical");
   });
-  it("projeção acima de 100% é crítica", () => {
-    expect(severity(30, { projectedPct: 101, limitAt: null })).toBe("critical");
-    expect(severity(30, { projectedPct: 100, limitAt: null })).toBe("ok");
+});
+
+describe("usageColor", () => {
+  it("azul até 70%, laranja→vermelho de 70 a 90%, vermelho a partir de 90%", () => {
+    expect(usageColor(0)).toBe("#1f6feb");
+    expect(usageColor(69.9)).toBe("#1f6feb");
+    expect(usageColor(70)).toBe("#d29922");
+    expect(usageColor(80)).toBe("#e57536");
+    expect(usageColor(90)).toBe("#f85149");
+    expect(usageColor(100)).toBe("#f85149");
   });
 });

@@ -11,7 +11,7 @@ Widget para Windows que mostra quanto do seu plano de IA você já usou — e
 
 - **Sessão (5h) e semanal** do Claude, com a % real vinda da Anthropic
 - **Previsão do ritmo**: a marca branca na barra mostra onde você vai estar
-  na redefinição; se for estourar, aparece "Limite em 1d 7h"
+  na redefinição; se for estourar, aparece "Nesse ritmo, acaba em 1d 7h"
 - **Atividade dos últimos 30 dias** em grade estilo GitHub, a partir dos logs
   locais do Claude Code
 - **Alertas** do Windows ao passar de cada limiar (padrão 80% e 95%) e quando

@@ -142,8 +142,9 @@ fonte Segoe UI Variable, sem emojis, sem brilhos/degradês decorativos.
 2. Abas de provedor com a maior % (só Claude na etapa A).
 3. Card do provedor: logo, nome, selo do plano; uma barra por janela
    com "% usado", "Redefine em …" e marca branca da projeção.
-   Cores: azul < 75%, laranja 75–90%, vermelho > 90% ou projeção > 100%
-   (aí aparece "Limite em 1d 7h" com ícone de tendência).
+   Cores (só o **uso** decide; revisto em 2026-10-03): azul < 70%, gradiente laranja→vermelho
+   de 70 a 90%, vermelho ≥ 90% — igual no ícone da bandeja. Se a projeção passar de 100%, aparece
+   "Nesse ritmo, acaba em 1d 7h" em laranja (vermelho só com uso ≥ 90%); em 100%, "Limite atingido".
 4. Card "Atividade · 30 dias": grade estilo GitHub (colunas = semanas,
    linhas = dias seg→dom), 5 níveis de azul, tooltip
    "12 set · 4,2M tokens · 87 msgs"; "Hoje: X" e "30 dias: Y".

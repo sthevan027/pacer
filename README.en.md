@@ -14,8 +14,8 @@ A Windows widget that shows how much of your AI plan you've already used — and
 - Claude's **5-hour session and weekly** usage, with the real percentage from
   Anthropic
 - **Pace projection**: the white mark on each bar shows where you'll be when
-  the window resets; if you're going to run out, it says "Limite em 1d 7h"
-  ("limit in 1d 7h")
+  the window resets; if you're going to run out, it says "Nesse ritmo, acaba em 1d 7h"
+  ("at this pace, runs out in 1d 7h")
 - **Last 30 days of activity** in a GitHub-style grid, built from Claude Code's
   local logs
 - Windows **notifications** when you cross each threshold (80% and 95% by

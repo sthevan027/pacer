@@ -71,14 +71,12 @@ svg.i { stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: ro
   transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s;
   animation: grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
 }
-.fill.sev-ok { background: var(--accent); }
-.fill.sev-warn { background: var(--warn); }
-.fill.sev-critical { background: var(--crit); }
 @keyframes grow { from { width: 0; } }
 .tick { position: absolute; top: -3px; width: 2px; height: 12px; margin-left: -1px; background: var(--text); border-radius: 1px; opacity: 0.85; animation: fade 0.3s 1s both; }
 @keyframes fade { from { opacity: 0; } }
 .mbot { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
-.warn { display: flex; align-items: center; gap: 4px; color: var(--crit); font-weight: 600; }
+.warn { display: flex; align-items: center; gap: 4px; color: var(--warn); font-weight: 600; white-space: nowrap; }
+.warn.crit { color: var(--crit); }
 .warnline { display: flex; gap: 6px; align-items: flex-start; color: #f0883e; font-size: 11px; padding: 4px 0 10px; }
 .warnline svg { margin-top: 1px; }
 .note { margin: 6px 0 10px; line-height: 1.45; }

@@ -43,12 +43,11 @@ pub enum Severity {
     Critical,
 }
 
-/// Azul < 75%, laranja 75–90%, vermelho > 90% ou projeção > 100%.
-pub fn severity(used_pct: f64, pace: Option<&Pace>) -> Severity {
-    let projected_over = pace.is_some_and(|p| p.projected_pct > 100.0);
-    if used_pct > 90.0 || projected_over {
+/// Só o uso decide a cor (a previsão não): azul < 70%, laranja→vermelho 70–90%, vermelho ≥ 90%.
+pub fn severity(used_pct: f64) -> Severity {
+    if used_pct >= 90.0 {
         Severity::Critical
-    } else if used_pct >= 75.0 {
+    } else if used_pct >= 70.0 {
         Severity::Warn
     } else {
         Severity::Ok
@@ -77,7 +76,7 @@ impl Snapshot {
     pub fn max_severity(&self) -> Severity {
         self.windows
             .iter()
-            .map(|w| severity(w.used_pct, w.pace.as_ref()))
+            .map(|w| severity(w.used_pct))
             .max()
             .unwrap_or(Severity::Ok)
     }
@@ -93,17 +92,32 @@ mod tests {
     }
 
     #[test]
-    fn severity_thresholds() {
-        assert_eq!(severity(74.9, None), Severity::Ok);
-        assert_eq!(severity(75.0, None), Severity::Warn);
-        assert_eq!(severity(90.0, None), Severity::Warn);
-        assert_eq!(severity(90.1, None), Severity::Critical);
+    fn severity_follows_usage_only() {
+        // azul até 70%, laranja→vermelho de 70 a 90%, vermelho a partir de 90%
+        assert_eq!(severity(0.0), Severity::Ok);
+        assert_eq!(severity(69.9), Severity::Ok);
+        assert_eq!(severity(70.0), Severity::Warn);
+        assert_eq!(severity(89.9), Severity::Warn);
+        assert_eq!(severity(90.0), Severity::Critical);
+        assert_eq!(severity(100.0), Severity::Critical);
     }
 
     #[test]
-    fn projection_over_100_is_critical_even_with_low_usage() {
-        assert_eq!(severity(30.0, Some(&pace(101.0))), Severity::Critical);
-        assert_eq!(severity(30.0, Some(&pace(100.0))), Severity::Ok);
+    fn high_projection_with_low_usage_is_not_alarming() {
+        // a previsão estourando não pinta a barra de vermelho: 22% usado continua azul
+        let w = UsageWindow {
+            id: "five_hour".into(),
+            label: "Sessão (5h)".into(),
+            used_pct: 22.0,
+            resets_at: None,
+            pace: Some(pace(180.0)),
+        };
+        let s = Snapshot {
+            provider: "claude".into(), name: "Claude".into(), plan: None,
+            windows: vec![w], activity: vec![], today_tokens: 0,
+            fetched_at: None, next_refresh_at: None, stale: false, notice: None,
+        };
+        assert_eq!(s.max_severity(), Severity::Ok);
     }
 
     #[test]
