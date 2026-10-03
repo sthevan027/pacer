@@ -15,3 +15,6 @@ usage-monitor/
 .claude-glass/
 .env
 .env.*
+
+# brainstorm companion
+.superpowers/
