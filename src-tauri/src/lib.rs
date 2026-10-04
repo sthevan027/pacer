@@ -25,6 +25,7 @@ pub fn run() {
 
             let win = app.get_webview_window("main").expect("janela main");
             window::apply_effects(&win);
+            window::low_memory(&win);
             window::anchor(&win);
             window::sink(&win);
             let w = win.clone();

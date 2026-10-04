@@ -2608,7 +2608,7 @@ dependencies = [
 
 [[package]]
 name = "pacer"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -2624,7 +2624,9 @@ dependencies = [
  "tauri-plugin-opener",
  "tempfile",
  "tokio",
+ "webview2-com",
  "window-vibrancy 0.6.0",
+ "windows-core",
 ]
 
 [[package]]

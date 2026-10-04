@@ -29,9 +29,11 @@ Widget para Windows que mostra quanto do seu plano de IA você já usou — e
 ## Instalação
 
 Baixe o instalador em [Releases](https://github.com/sthevan027/pacer/releases)
-e execute. A versão 2.0.0 ainda **não é assinada** (a assinatura com o certificado
-interno da Virex volta numa próxima versão); por isso o Windows pode mostrar "Windows protegeu o computador" → **Mais informações →
-Executar assim mesmo**.
+e execute. A partir da 2.0.1 o instalador é **assinado com o certificado Sthevan.Dev**
+(autoassinado, não é de uma autoridade comercial). Por isso o Windows ainda pode mostrar
+"Windows protegeu o computador" → **Mais informações → Executar assim mesmo**.
+Para o Windows reconhecer a assinatura, instale uma vez como confiável o
+`Sthevan.Dev-Root-CA.cer` publicado junto da release (opcional).
 
 ### Rodar do código
 
