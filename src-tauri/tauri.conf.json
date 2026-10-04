@@ -23,7 +23,8 @@
         "alwaysOnTop": false,
         "alwaysOnBottom": true,
         "skipTaskbar": true,
-        "visible": false
+        "visible": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-gpu"
       }
     ],
     "security": {

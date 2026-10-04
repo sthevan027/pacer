@@ -55,16 +55,6 @@ pub fn show_main(app: &AppHandle) {
     }
 }
 
-fn toggle_main(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window("main") {
-        if w.is_visible().unwrap_or(false) {
-            let _ = w.hide();
-        } else {
-            show_main(app);
-        }
-    }
-}
-
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
     let refresh = MenuItem::with_id(app, "refresh", "Atualizar agora", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Configurações", true, None::<&str>)?;
@@ -88,7 +78,10 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         })
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
-                toggle_main(tray.app_handle());
+                // Sempre traz pra frente. Não dá pra alternar por `is_visible()`: no fundo da área de
+                // trabalho o widget conta como visível mesmo coberto, e o 1º clique o escondia.
+                // Esconder: Esc. Voltar ao fundo: clicar em outra coisa (window::sink).
+                show_main(tray.app_handle());
             }
         })
         .build(app)?;

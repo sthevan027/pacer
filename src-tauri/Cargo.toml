@@ -31,6 +31,11 @@ tokio = { version = "1", features = ["sync", "time", "macros"] }
 async-trait = "0.1"
 dirs = "6"
 
+[target.'cfg(windows)'.dependencies]
+# mesmas versões que o Tauri já usa (Cargo.lock) — só para pedir ao WebView2 o modo de memória baixa
+webview2-com = "0.39"
+windows-core = "0.62"
+
 [dev-dependencies]
 tempfile = "3"
 mockito = "1"
