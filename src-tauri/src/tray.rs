@@ -1,10 +1,25 @@
 use crate::snapshot::Snapshot;
+use crate::window::{self, Rect};
 use std::f64::consts::TAU;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
+use std::time::Duration;
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::webview::WebviewWindowBuilder;
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow};
+
+/// Mesmos argumentos do WebView2 da janela `main` (ver `tauri.conf.json`): sem GPU, memória
+/// mais baixa parada em segundo plano.
+const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-gpu";
+
+/// Janelinha visual que aparece ao passar o mouse na bandeja (Sessão + Semanal).
+const HOVER_W: i32 = 280;
+const HOVER_H: i32 = 150;
+const HOVER_MARGIN: i32 = 8;
+/// Quanto esperar depois do mouse sair antes de esconder (evita piscar ao passar rápido).
+const HOVER_HIDE_DELAY: Duration = Duration::from_millis(250);
 
 pub const SIZE: u32 = 32;
 const TRACK: [u8; 3] = [0x6e, 0x76, 0x81];
@@ -55,6 +70,75 @@ pub fn show_main(app: &AppHandle) {
     }
 }
 
+/// Monotônico: toda `Enter` ou `Leave` avança. Uma `hide` atrasada só executa se, quando chegar
+/// a vez dela, ninguém tiver mexido no hover de novo nesse meio tempo (outro Enter, outra Leave).
+static HOVER_GEN: AtomicU32 = AtomicU32::new(0);
+
+/// A janela só existe depois do primeiro hover (não custa memória de um 2º WebView se o
+/// usuário nunca passar o mouse ali). Depois de criada, fica escondida e é só mostrada/escondida.
+fn hover_window(app: &AppHandle) -> Option<WebviewWindow> {
+    if let Some(win) = app.get_webview_window("hover") {
+        return Some(win);
+    }
+    let win = WebviewWindowBuilder::new(app, "hover", WebviewUrl::App("index.html?view=hover".into()))
+        .title("Pacer")
+        .inner_size(f64::from(HOVER_W), f64::from(HOVER_H))
+        .resizable(false)
+        .decorations(false)
+        .transparent(true)
+        .shadow(true)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .visible(false)
+        .focused(false)
+        .additional_browser_args(BROWSER_ARGS)
+        .build()
+        .ok()?;
+    // Sem acrílico aqui: combinado com set_ignore_cursor_events (clique-através), a composição
+    // do Windows quebrava visualmente quando a janela main roubava o foco. O fundo translúcido
+    // já vem do CSS (.wg), não depende do efeito nativo.
+    window::low_memory(&win);
+    // Só pra olhar: nunca intercepta clique (inclusive de ícones vizinhos na bandeja).
+    let _ = win.set_ignore_cursor_events(true);
+    Some(win)
+}
+
+/// Mostra a janelinha de hover posicionada perto do ícone, com as barras de Sessão e Semanal.
+/// Não aparece se o painel principal já estiver em primeiro plano (evita sobrepor UI).
+fn show_hover(app: &AppHandle, tray_rect: tauri::Rect) {
+    HOVER_GEN.fetch_add(1, Ordering::SeqCst);
+    if app.get_webview_window("main").is_some_and(|w| w.is_focused().unwrap_or(false)) {
+        return;
+    }
+    let Some(win) = hover_window(app) else { return };
+    let scale = win.scale_factor().unwrap_or(1.0);
+    let pos = tray_rect.position.to_physical::<i32>(scale);
+    let size = tray_rect.size.to_physical::<u32>(scale);
+    let tray = Rect { x: pos.x, y: pos.y, w: size.width as i32, h: size.height as i32 };
+    let Some(area) = window::work_area(&win) else { return };
+    let margin = (f64::from(HOVER_MARGIN) * scale).round() as i32;
+    let w = (f64::from(HOVER_W) * scale).round() as i32;
+    let h = (f64::from(HOVER_H) * scale).round() as i32;
+    let (x, y) = window::position_near_tray(tray, w, h, area, margin);
+    let _ = win.set_position(PhysicalPosition::new(x, y));
+    let _ = win.show();
+}
+
+/// Esconde o hover depois de `HOVER_HIDE_DELAY`, a menos que um `Enter` novo cancele antes.
+fn hide_hover_later(app: &AppHandle) {
+    let gen = HOVER_GEN.fetch_add(1, Ordering::SeqCst) + 1;
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(HOVER_HIDE_DELAY).await;
+        if HOVER_GEN.load(Ordering::SeqCst) != gen {
+            return;
+        }
+        if let Some(win) = app.get_webview_window("hover") {
+            let _ = win.hide();
+        }
+    });
+}
+
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
     let refresh = MenuItem::with_id(app, "refresh", "Atualizar agora", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Configurações", true, None::<&str>)?;
@@ -64,7 +148,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
 
     TrayIconBuilder::with_id("main")
         .icon(Image::new_owned(render_icon(0.0), SIZE, SIZE))
-        .tooltip("Pacer")
+        // Sem tooltip nativo: o popup de hover (janela "hover") já mostra Sessão e Semanal.
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -76,13 +160,16 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
             "quit" => app.exit(0),
             _ => {}
         })
-        .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+        .on_tray_icon_event(|tray, event| match event {
+            TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } => {
                 // Sempre traz pra frente. Não dá pra alternar por `is_visible()`: no fundo da área de
                 // trabalho o widget conta como visível mesmo coberto, e o 1º clique o escondia.
                 // Esconder: Esc. Voltar ao fundo: clicar em outra coisa (window::sink).
                 show_main(tray.app_handle());
             }
+            TrayIconEvent::Enter { rect, .. } => show_hover(tray.app_handle(), rect),
+            TrayIconEvent::Leave { .. } => hide_hover_later(tray.app_handle()),
+            _ => {}
         })
         .build(app)?;
     Ok(())
@@ -105,7 +192,6 @@ pub fn update(app: &AppHandle, snaps: &[Snapshot]) {
     *last = Some(key);
     if let Some(t) = app.tray_by_id("main") {
         let _ = t.set_icon(Some(Image::new_owned(render_icon(pct), SIZE, SIZE)));
-        let _ = t.set_tooltip(Some(format!("Pacer · {key}%")));
     }
 }
 

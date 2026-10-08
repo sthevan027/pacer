@@ -3,11 +3,20 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { MainView } from "./components/MainView";
 import { SettingsView } from "./components/settings/SettingsView";
+import { TrayHover } from "./components/TrayHover";
 import { useAutoHeight, useNow, usePacer } from "./lib/hooks";
 
 type View = "main" | "settings";
 
+// A janela "hover" é uma janela nativa separada, pequena e fixa (sem auto-height nem o
+// estado de abas) que só mostra as barras de Sessão e Semanal perto do ícone da bandeja.
+const isHoverWindow = new URLSearchParams(window.location.search).get("view") === "hover";
+
 export default function App() {
+  return isHoverWindow ? <TrayHover /> : <MainApp />;
+}
+
+function MainApp() {
   const state = usePacer();
   const now = useNow();
   const [view, setView] = useState<View>("main");
