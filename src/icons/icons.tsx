@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import claudeSvg from "./claude.svg?raw";
 
-export type IconName = "refresh" | "gear" | "back" | "sliders" | "bell" | "plug" | "plus" | "alert" | "trend";
+export type IconName = "refresh" | "gear" | "back" | "sliders" | "bell" | "plug" | "plus" | "alert" | "trend" | "palette";
 
 const PATHS: Record<IconName, ReactNode> = {
   refresh: (
@@ -41,6 +41,14 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <path d="M23 6l-9.5 9.5-5-5L1 18" />
       <path d="M17 6h6v6" />
+    </>
+  ),
+  palette: (
+    <>
+      <path d="M12 22a10 10 0 1 1 0-20 8 8 0 0 1 0 16c-1 0-1.5-.5-1.5-1.5 0-.8.5-1 1-1.5.5-.5 1-.8 1-1.5a2 2 0 0 0-2-2H9a4 4 0 0 1-4-4" />
+      <circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="10.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
     </>
   ),
 };

@@ -42,7 +42,7 @@ pub fn run() {
                 WindowEvent::Focused(false) => window::sink(&w),
                 _ => {}
             });
-            tray::create(app.handle())?;
+            tray::create(app.handle(), &cfg.accent_color)?;
 
             commands::apply_config(app.handle(), &cfg);
             win.show()?;

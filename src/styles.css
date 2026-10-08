@@ -1,7 +1,8 @@
 :root {
   color-scheme: dark;
   --accent: #1f6feb;
-  --accent-2: #58a6ff;
+  /* variante clara, derivada da cor de destaque escolhida (não precisa de um 2º hex por preset) */
+  --accent-2: color-mix(in srgb, var(--accent) 65%, white);
   --text: #e6edf3;
   --muted: #8b949e;
   --dim: #6e7681;
@@ -21,7 +22,13 @@ body {
 }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 .wg { width: 100%; padding: 14px; background: rgba(24, 28, 34, 0.82); }
-.wg.hover { height: 100%; padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; }
+.wg.hover {
+  height: 100%; padding: 10px 14px; display: flex; flex-direction: column; justify-content: center;
+  /* sem acrílico nativo aqui (ver tray.rs): fundo quase sólido e cantos arredondados via CSS,
+     já que a janela em si é transparente por fora (sem isso, cantos ficam retos e translúcidos) */
+  border-radius: 14px;
+  background: rgba(18, 20, 24, 0.97);
+}
 .wg.hover .m { padding: 6px 0; }
 
 svg.i { stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -120,8 +127,16 @@ svg.i { stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: ro
 .segc button { position: relative; z-index: 1; padding: 3px 10px; color: var(--muted); font-weight: 600; font-size: 11px; transition: color 0.2s; }
 .segc button.on { color: #fff; }
 .pillbg { position: absolute; top: 2px; bottom: 2px; border-radius: 5px; background: var(--accent); transition: left 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.32s; }
+.accentc { display: flex; gap: 8px; }
+.accentb {
+  width: 22px; height: 22px; border-radius: 50%; flex: none;
+  border: 2px solid transparent; outline-offset: 2px;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.accentb:hover { transform: scale(1.12); }
+.accentb.on { border-color: #fff; }
 .thr { padding: 18px 0 6px; }
-.tbar { position: relative; height: 6px; border-radius: 99px; background: linear-gradient(90deg, #1f6feb 0%, #388bfd 55%, #d29922 78%, #f85149 100%); }
+.tbar { position: relative; height: 6px; border-radius: 99px; background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 55%, #d29922 78%, #f85149 100%); }
 .h {
   position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
   background: #fff; border: 2px solid #0d1117; cursor: grab; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); touch-action: none;

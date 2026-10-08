@@ -3,6 +3,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { ClaudeLogo, Icon } from "../../icons/icons";
 import type { AppState, Config } from "../../lib/types";
 import { Header } from "../Header";
+import { AccentPicker } from "./AccentPicker";
 import { Row } from "./Row";
 import { Segmented } from "./Segmented";
 import { ThresholdBar } from "./ThresholdBar";
@@ -39,6 +40,16 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
         </Row>
         <Row label="Atualizar a cada">
           <Segmented value={cfg.refreshMinutes} options={REFRESH_OPTIONS} format={(v) => `${v}m`} onChange={(v) => save({ refreshMinutes: v })} />
+        </Row>
+      </section>
+
+      <section className="sec">
+        <div className="sh">
+          <Icon name="palette" />
+          Aparência
+        </div>
+        <Row label="Cor de destaque" hint="Vale pro painel, pro hover da bandeja e pro ícone">
+          <AccentPicker value={cfg.accentColor} onChange={(accentColor) => save({ accentColor })} />
         </Row>
       </section>
 

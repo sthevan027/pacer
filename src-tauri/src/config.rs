@@ -33,11 +33,17 @@ pub struct ProvidersConfig {
     pub claude: ProviderToggle,
 }
 
+/// Cor de destaque: substitui só o estado "ok" da escala de severidade (anel da bandeja, barras,
+/// chrome geral da UI) — aviso/crítico continuam laranja/vermelho fixos. Só presets, sem hex livre.
+pub const DEFAULT_ACCENT: &str = "#1f6feb";
+pub const ACCENT_PRESETS: [&str; 5] = ["#1f6feb", "#8957e5", "#2ea043", "#db61a2", "#39c5cf"];
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Config {
     pub start_with_windows: bool,
     pub refresh_minutes: u32,
+    pub accent_color: String,
     pub alerts: AlertsConfig,
     pub providers: ProvidersConfig,
 }
@@ -47,6 +53,7 @@ impl Default for Config {
         Self {
             start_with_windows: true,
             refresh_minutes: 5,
+            accent_color: DEFAULT_ACCENT.to_string(),
             alerts: AlertsConfig::default(),
             providers: ProvidersConfig::default(),
         }
@@ -57,6 +64,9 @@ impl Config {
     pub fn normalized(mut self) -> Self {
         if ![1, 5, 10].contains(&self.refresh_minutes) {
             self.refresh_minutes = 5;
+        }
+        if !ACCENT_PRESETS.contains(&self.accent_color.as_str()) {
+            self.accent_color = DEFAULT_ACCENT.to_string();
         }
         self.alerts.thresholds.retain(|t| (1..=100).contains(t));
         self.alerts.thresholds.sort_unstable();
@@ -165,6 +175,27 @@ mod tests {
         let c = load(&p);
         assert_eq!(c.refresh_minutes, 10);
         assert!(p.exists(), "campo antigo não pode contar como arquivo corrompido");
+    }
+
+    #[test]
+    fn accent_color_defaults_to_the_first_preset() {
+        assert_eq!(Config::default().accent_color, DEFAULT_ACCENT);
+        assert_eq!(DEFAULT_ACCENT, ACCENT_PRESETS[0]);
+    }
+
+    #[test]
+    fn accent_color_outside_the_preset_list_falls_back_to_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        fs::write(&p, r##"{"accentColor":"#ff00ff"}"##).unwrap();
+        assert_eq!(load(&p).accent_color, DEFAULT_ACCENT);
+    }
+
+    #[test]
+    fn accent_color_preset_survives_normalization() {
+        let mut c = Config { accent_color: ACCENT_PRESETS[2].to_string(), ..Config::default() };
+        c = c.normalized();
+        assert_eq!(c.accent_color, ACCENT_PRESETS[2]);
     }
 
     #[test]

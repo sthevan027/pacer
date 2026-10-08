@@ -13,9 +13,9 @@ describe("severity", () => {
 });
 
 describe("usageColor", () => {
-  it("azul até 70%, laranja→vermelho de 70 a 90%, vermelho a partir de 90%", () => {
-    expect(usageColor(0)).toBe("#1f6feb");
-    expect(usageColor(69.9)).toBe("#1f6feb");
+  it("cor de destaque até 70%, laranja→vermelho de 70 a 90%, vermelho a partir de 90%", () => {
+    expect(usageColor(0)).toBe("var(--accent)");
+    expect(usageColor(69.9)).toBe("var(--accent)");
     expect(usageColor(70)).toBe("#d29922");
     expect(usageColor(80)).toBe("#e57536");
     expect(usageColor(90)).toBe("#f85149");

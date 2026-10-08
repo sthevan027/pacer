@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { UsageBar } from "./UsageBar";
 import { useNow, usePacer } from "../lib/hooks";
 
@@ -11,8 +12,9 @@ export function TrayHover() {
 
   if (!session && !week) return null;
 
+  const style = state ? ({ "--accent": state.config.accentColor } as CSSProperties) : undefined;
   return (
-    <div className="wg hover">
+    <div className="wg hover" style={style}>
       {session && <UsageBar w={session} now={now} />}
       {week && <UsageBar w={week} now={now} />}
     </div>
