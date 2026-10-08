@@ -28,11 +28,8 @@ pub fn run() {
             window::low_memory(&win);
             window::anchor(&win);
             window::sink(&win);
-
-            if let Some(hover) = app.get_webview_window("hover") {
-                window::apply_effects(&hover);
-                window::low_memory(&hover);
-            }
+            // A janela "hover" não é criada aqui: só existe (tray::hover_window) na primeira vez
+            // que o mouse passa no ícone, pra não gastar memória de um segundo WebView à toa.
             let w = win.clone();
             win.on_window_event(move |e| match e {
                 WindowEvent::CloseRequested { api, .. } => {

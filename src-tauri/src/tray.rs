@@ -7,7 +7,12 @@ use std::time::Duration;
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, PhysicalPosition};
+use tauri::webview::WebviewWindowBuilder;
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow};
+
+/// Mesmos argumentos do WebView2 da janela `main` (ver `tauri.conf.json`): sem GPU, memória
+/// mais baixa parada em segundo plano.
+const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-gpu";
 
 /// Janelinha visual que aparece ao passar o mouse na bandeja (Sessão + Semanal).
 const HOVER_W: i32 = 280;
@@ -69,6 +74,35 @@ pub fn show_main(app: &AppHandle) {
 /// a vez dela, ninguém tiver mexido no hover de novo nesse meio tempo (outro Enter, outra Leave).
 static HOVER_GEN: AtomicU32 = AtomicU32::new(0);
 
+/// A janela só existe depois do primeiro hover (não custa memória de um 2º WebView se o
+/// usuário nunca passar o mouse ali). Depois de criada, fica escondida e é só mostrada/escondida.
+fn hover_window(app: &AppHandle) -> Option<WebviewWindow> {
+    if let Some(win) = app.get_webview_window("hover") {
+        return Some(win);
+    }
+    let win = WebviewWindowBuilder::new(app, "hover", WebviewUrl::App("index.html?view=hover".into()))
+        .title("Pacer")
+        .inner_size(f64::from(HOVER_W), f64::from(HOVER_H))
+        .resizable(false)
+        .decorations(false)
+        .transparent(true)
+        .shadow(true)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .visible(false)
+        .focused(false)
+        .additional_browser_args(BROWSER_ARGS)
+        .build()
+        .ok()?;
+    // Sem acrílico aqui: combinado com set_ignore_cursor_events (clique-através), a composição
+    // do Windows quebrava visualmente quando a janela main roubava o foco. O fundo translúcido
+    // já vem do CSS (.wg), não depende do efeito nativo.
+    window::low_memory(&win);
+    // Só pra olhar: nunca intercepta clique (inclusive de ícones vizinhos na bandeja).
+    let _ = win.set_ignore_cursor_events(true);
+    Some(win)
+}
+
 /// Mostra a janelinha de hover posicionada perto do ícone, com as barras de Sessão e Semanal.
 /// Não aparece se o painel principal já estiver em primeiro plano (evita sobrepor UI).
 fn show_hover(app: &AppHandle, tray_rect: tauri::Rect) {
@@ -76,7 +110,7 @@ fn show_hover(app: &AppHandle, tray_rect: tauri::Rect) {
     if app.get_webview_window("main").is_some_and(|w| w.is_focused().unwrap_or(false)) {
         return;
     }
-    let Some(win) = app.get_webview_window("hover") else { return };
+    let Some(win) = hover_window(app) else { return };
     let scale = win.scale_factor().unwrap_or(1.0);
     let pos = tray_rect.position.to_physical::<i32>(scale);
     let size = tray_rect.size.to_physical::<u32>(scale);
