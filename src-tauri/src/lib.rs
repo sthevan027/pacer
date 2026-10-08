@@ -28,6 +28,11 @@ pub fn run() {
             window::low_memory(&win);
             window::anchor(&win);
             window::sink(&win);
+
+            if let Some(hover) = app.get_webview_window("hover") {
+                window::apply_effects(&hover);
+                window::low_memory(&hover);
+            }
             let w = win.clone();
             win.on_window_event(move |e| match e {
                 WindowEvent::CloseRequested { api, .. } => {

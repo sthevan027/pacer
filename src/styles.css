@@ -21,6 +21,8 @@ body {
 }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 .wg { width: 100%; padding: 14px; background: rgba(24, 28, 34, 0.82); }
+.wg.hover { height: 100%; padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; }
+.wg.hover .m { padding: 6px 0; }
 
 svg.i { stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .logo { display: inline-grid; color: #d97757; flex: none; }

@@ -18,13 +18,23 @@ pub fn anchored_top_right(area: Rect, w: i32, margin: i32) -> (i32, i32) {
     (area.x + area.w - w - margin, area.y + margin)
 }
 
+/// Centralizado no ícone da bandeja, acima dele (caso comum: barra de tarefas embaixo). Se não
+/// couber em cima (barra de tarefas no topo), cai pra baixo do ícone. Sempre dentro da área útil.
+pub fn position_near_tray(tray: Rect, popup_w: i32, popup_h: i32, area: Rect, margin: i32) -> (i32, i32) {
+    let cx = tray.x + tray.w / 2;
+    let x = (cx - popup_w / 2).clamp(area.x, area.x + area.w - popup_w);
+    let above = tray.y - popup_h - margin;
+    let y = if above >= area.y { above } else { tray.y + tray.h + margin };
+    (x, y)
+}
+
 /// Altura (px lógicos) que cabe na área útil do monitor, com margem em cima e embaixo.
 pub fn fit_height(requested: f64, area_h_px: i32, scale: f64) -> f64 {
     let max = (f64::from(area_h_px) / scale - 2.0 * MARGIN).max(MIN_HEIGHT);
     requested.clamp(MIN_HEIGHT, max)
 }
 
-fn work_area(win: &WebviewWindow) -> Option<Rect> {
+pub(crate) fn work_area(win: &WebviewWindow) -> Option<Rect> {
     let m = win
         .current_monitor()
         .ok()
@@ -116,6 +126,29 @@ mod tests {
         assert_eq!(anchored_top_right(top_bar, W, 12), (1608, 48 + 12));
         let second = Rect { x: 1920, y: -200, w: 1280, h: 984 };
         assert_eq!(anchored_top_right(second, W, 12), (1920 + 1280 - 312, -200 + 12));
+    }
+
+    #[test]
+    fn positions_above_a_tray_icon_centered_with_bottom_taskbar() {
+        let area = Rect { x: 0, y: 0, w: 1920, h: 1032 };
+        let tray = Rect { x: 900, y: 1012, w: 20, h: 20 }; // longe da borda, não clampa
+        assert_eq!(position_near_tray(tray, 280, 150, area, 8), (910 - 140, 1012 - 150 - 8));
+    }
+
+    #[test]
+    fn position_near_tray_clamps_horizontally_at_the_screen_edge() {
+        let area = Rect { x: 0, y: 0, w: 1920, h: 1032 };
+        let tray = Rect { x: 1910, y: 1012, w: 20, h: 20 }; // ícone quase colado na borda direita
+        assert_eq!(position_near_tray(tray, 280, 150, area, 8).0, 1920 - 280);
+    }
+
+    #[test]
+    fn position_near_tray_falls_below_when_it_would_not_fit_above() {
+        // barra de tarefas no topo: não cabe acima do ícone, cai pra baixo
+        let area = Rect { x: 0, y: 48, w: 1920, h: 1032 };
+        let tray = Rect { x: 100, y: 48, w: 20, h: 20 };
+        // x também clampa (110-140 = -30, estoura a esquerda)
+        assert_eq!(position_near_tray(tray, 280, 150, area, 8), (0, 48 + 20 + 8));
     }
 
     #[test]
