@@ -16,9 +16,14 @@ Widget para Windows que mostra quanto do seu plano de IA você já usou — e
   locais do Claude Code
 - **Alertas** do Windows ao passar de cada limiar (padrão 80% e 95%) e quando
   a previsão indicar que o limite acaba antes da redefinição
-- Ícone na bandeja que muda de cor conforme o uso
+- Ícone na bandeja que muda de cor conforme o uso, com popup visual ao passar
+  o mouse (Sessão e Semanal, sem precisar abrir o painel)
+- **Cor de destaque** configurável (5 presets) — vale pro painel, pro popup
+  de hover e pro ícone, tudo junto. Aviso (laranja) e crítico (vermelho)
+  continuam fixos, pra não perder o sinal de alerta
 
 ![Configurações](docs/screenshots/pacer-settings.png)
+![Aparência](docs/screenshots/pacer-appearance.png)
 
 ## Requisitos
 

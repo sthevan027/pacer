@@ -20,9 +20,14 @@ A Windows widget that shows how much of your AI plan you've already used — and
   local logs
 - Windows **notifications** when you cross each threshold (80% and 95% by
   default) and when the projection says you'll hit the limit before the reset
-- A tray icon whose color follows your usage
+- A tray icon whose color follows your usage, with a visual popup on hover
+  (session and weekly, no need to open the panel)
+- Configurable **accent color** (5 presets) — applies to the panel, the hover
+  popup and the tray icon together. Warning (orange) and critical (red) stay
+  fixed, so the alert signal never gets lost
 
 ![Settings](docs/screenshots/pacer-settings.png)
+![Appearance](docs/screenshots/pacer-appearance.png)
 
 ## Requirements
 

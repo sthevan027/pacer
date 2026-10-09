@@ -28,6 +28,8 @@ pub fn save_config(app: AppHandle, shared: State<'_, Arc<Shared>>, config: Confi
     config::save(&shared.config_path, &cfg).map_err(|e| e.to_string())?;
     *shared.config.lock().unwrap() = cfg.clone();
     apply_config(&app, &cfg);
+    // Cor de destaque: redesenha o ícone já, sem esperar o próximo refresh do scheduler.
+    crate::tray::update(&app, &shared.snapshots.lock().unwrap(), &cfg.accent_color);
     let _ = app.emit("config", &cfg);
     shared.wake_up();
     Ok(cfg)

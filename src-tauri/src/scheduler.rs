@@ -120,7 +120,7 @@ pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
                 snaps.push(snap);
             }
 
-            crate::tray::update(&app, &snaps);
+            crate::tray::update(&app, &snaps, &cfg.accent_color);
             *shared.snapshots.lock().unwrap() = snaps.clone();
             let _ = app.emit("snapshot", &snaps);
 

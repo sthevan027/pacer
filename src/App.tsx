@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { MainView } from "./components/MainView";
 import { SettingsView } from "./components/settings/SettingsView";
@@ -40,8 +41,9 @@ function MainApp() {
     };
   }, []);
 
+  const style = state ? ({ "--accent": state.config.accentColor } as CSSProperties) : undefined;
   return (
-    <div className="wg" ref={ref}>
+    <div className="wg" ref={ref} style={style}>
       {!state ? (
         <p className="muted note">Carregando…</p>
       ) : view === "main" ? (

@@ -42,6 +42,7 @@ export interface AlertsConfig {
 export interface Config {
   startWithWindows: boolean;
   refreshMinutes: number;
+  accentColor: string;
   alerts: AlertsConfig;
   providers: { claude: { enabled: boolean } };
 }

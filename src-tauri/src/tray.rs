@@ -23,15 +23,27 @@ const HOVER_HIDE_DELAY: Duration = Duration::from_millis(250);
 
 pub const SIZE: u32 = 32;
 const TRACK: [u8; 3] = [0x6e, 0x76, 0x81];
-const BLUE: [u8; 3] = [0x1f, 0x6f, 0xeb];
+/// Mesmo valor de `config::DEFAULT_ACCENT`: usado se o hex salvo não existir ou vier inválido
+/// (não deveria acontecer, já que `Config::normalized` só aceita um dos presets).
+const DEFAULT_ACCENT: [u8; 3] = [0x1f, 0x6f, 0xeb];
 const ORANGE: [u8; 3] = [0xd2, 0x99, 0x22];
 const RED: [u8; 3] = [0xf8, 0x51, 0x49];
 
-/// Mesma escala das barras (src/lib/severity.ts): azul < 70%, laranja→vermelho de 70 a 90%,
-/// vermelho ≥ 90%.
-pub fn usage_color(pct: f64) -> [u8; 3] {
+/// `"#rrggbb"` → RGB. `None` se não tiver o formato esperado.
+pub fn parse_hex_rgb(hex: &str) -> Option<[u8; 3]> {
+    let h = hex.strip_prefix('#')?;
+    if h.len() != 6 {
+        return None;
+    }
+    let byte = |i: usize| u8::from_str_radix(&h[i..i + 2], 16).ok();
+    Some([byte(0)?, byte(2)?, byte(4)?])
+}
+
+/// Mesma escala das barras (src/lib/severity.ts): a cor de destaque < 70%, laranja→vermelho de
+/// 70 a 90%, vermelho ≥ 90% (aviso/crítico nunca mudam, só o estado "ok" é customizável).
+pub fn usage_color(pct: f64, accent: [u8; 3]) -> [u8; 3] {
     if pct < 70.0 {
-        return BLUE;
+        return accent;
     }
     if pct >= 90.0 {
         return RED;
@@ -42,12 +54,12 @@ pub fn usage_color(pct: f64) -> [u8; 3] {
 }
 
 /// Anel 32×32: trilho cinza + arco colorido proporcional ao uso, horário a partir do topo.
-pub fn render_icon(pct: f64) -> Vec<u8> {
+pub fn render_icon(pct: f64, accent: [u8; 3]) -> Vec<u8> {
     let mut px = vec![0u8; (SIZE * SIZE * 4) as usize];
     let c = (SIZE as f64 - 1.0) / 2.0;
     let (r_out, r_in) = (15.0, 10.0);
     let frac = (pct / 100.0).clamp(0.0, 1.0);
-    let col = usage_color(pct);
+    let col = usage_color(pct, accent);
     for y in 0..SIZE {
         for x in 0..SIZE {
             let (dx, dy) = (x as f64 - c, y as f64 - c);
@@ -139,15 +151,16 @@ fn hide_hover_later(app: &AppHandle) {
     });
 }
 
-pub fn create(app: &AppHandle) -> tauri::Result<()> {
+pub fn create(app: &AppHandle, accent_hex: &str) -> tauri::Result<()> {
     let refresh = MenuItem::with_id(app, "refresh", "Atualizar agora", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Configurações", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&refresh, &settings, &sep, &quit])?;
+    let accent = parse_hex_rgb(accent_hex).unwrap_or(DEFAULT_ACCENT);
 
     TrayIconBuilder::with_id("main")
-        .icon(Image::new_owned(render_icon(0.0), SIZE, SIZE))
+        .icon(Image::new_owned(render_icon(0.0, accent), SIZE, SIZE))
         // Sem tooltip nativo: o popup de hover (janela "hover") já mostra Sessão e Semanal.
         .menu(&menu)
         .show_menu_on_left_click(false)
@@ -175,23 +188,25 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-static LAST: Mutex<Option<u8>> = Mutex::new(None);
+static LAST: Mutex<Option<(u8, [u8; 3])>> = Mutex::new(None);
 
-/// Mostra a maior % entre as janelas; troca o ícone só quando a % arredondada muda.
-pub fn update(app: &AppHandle, snaps: &[Snapshot]) {
+/// Mostra a maior % entre as janelas; troca o ícone só quando a % arredondada ou a cor mudam
+/// (a cor muda ao salvar as Configurações, sem esperar o próximo refresh).
+pub fn update(app: &AppHandle, snaps: &[Snapshot], accent_hex: &str) {
     let pct = snaps
         .iter()
         .flat_map(|s| s.windows.iter())
         .map(|w| w.used_pct)
         .fold(0.0_f64, f64::max);
-    let key = pct.round() as u8;
+    let accent = parse_hex_rgb(accent_hex).unwrap_or(DEFAULT_ACCENT);
+    let key = (pct.round() as u8, accent);
     let mut last = LAST.lock().unwrap();
     if *last == Some(key) {
         return;
     }
     *last = Some(key);
     if let Some(t) = app.tray_by_id("main") {
-        let _ = t.set_icon(Some(Image::new_owned(render_icon(pct), SIZE, SIZE)));
+        let _ = t.set_icon(Some(Image::new_owned(render_icon(pct, accent), SIZE, SIZE)));
     }
 }
 
@@ -199,25 +214,36 @@ pub fn update(app: &AppHandle, snaps: &[Snapshot]) {
 mod tests {
     use super::*;
 
+    const BLUE: [u8; 3] = DEFAULT_ACCENT;
+    const PURPLE: [u8; 3] = [0x89, 0x57, 0xe5];
+
     fn px(buf: &[u8], x: u32, y: u32) -> [u8; 4] {
         let i = ((y * SIZE + x) * 4) as usize;
         [buf[i], buf[i + 1], buf[i + 2], buf[i + 3]]
     }
 
     #[test]
-    fn usage_color_blue_then_orange_to_red_then_red() {
-        assert_eq!(usage_color(0.0), [0x1f, 0x6f, 0xeb]);
-        assert_eq!(usage_color(69.9), [0x1f, 0x6f, 0xeb]);
-        assert_eq!(usage_color(70.0), [0xd2, 0x99, 0x22]);
-        // no meio do caminho: média entre laranja e vermelho
-        assert_eq!(usage_color(80.0), [229, 117, 54]);
-        assert_eq!(usage_color(90.0), [0xf8, 0x51, 0x49]);
-        assert_eq!(usage_color(100.0), [0xf8, 0x51, 0x49]);
+    fn parses_hex_and_rejects_bad_formats() {
+        assert_eq!(parse_hex_rgb("#1f6feb"), Some(BLUE));
+        assert_eq!(parse_hex_rgb("1f6feb"), None); // sem #
+        assert_eq!(parse_hex_rgb("#1f6fe"), None); // curto demais
+        assert_eq!(parse_hex_rgb("#1f6fezz"), None); // não é hex
+    }
+
+    #[test]
+    fn usage_color_accent_then_orange_to_red_then_red() {
+        assert_eq!(usage_color(0.0, PURPLE), PURPLE);
+        assert_eq!(usage_color(69.9, PURPLE), PURPLE);
+        // aviso/crítico nunca mudam, qualquer que seja a cor de destaque
+        assert_eq!(usage_color(70.0, PURPLE), [0xd2, 0x99, 0x22]);
+        assert_eq!(usage_color(80.0, PURPLE), [229, 117, 54]); // meio do caminho laranja→vermelho
+        assert_eq!(usage_color(90.0, PURPLE), [0xf8, 0x51, 0x49]);
+        assert_eq!(usage_color(100.0, PURPLE), [0xf8, 0x51, 0x49]);
     }
 
     #[test]
     fn ring_fills_clockwise_from_top() {
-        let buf = render_icon(50.0);
+        let buf = render_icon(50.0, BLUE);
         assert_eq!(buf.len(), (SIZE * SIZE * 4) as usize);
         assert_eq!(px(&buf, 16, 2), [0x1f, 0x6f, 0xeb, 255]); // topo, logo depois do 0° → preenchido
         assert_eq!(px(&buf, 2, 16), [0x6e, 0x76, 0x81, 255]); // esquerda (~270°) → trilho cinza
@@ -227,13 +253,20 @@ mod tests {
 
     #[test]
     fn ring_color_follows_usage() {
-        assert_eq!(px(&render_icon(95.0), 16, 2), [0xf8, 0x51, 0x49, 255]);
-        assert_eq!(px(&render_icon(80.0), 16, 2), [229, 117, 54, 255]);
-        assert_eq!(px(&render_icon(30.0), 16, 2), [0x1f, 0x6f, 0xeb, 255]);
+        assert_eq!(px(&render_icon(95.0, BLUE), 16, 2), [0xf8, 0x51, 0x49, 255]);
+        assert_eq!(px(&render_icon(80.0, BLUE), 16, 2), [229, 117, 54, 255]);
+        assert_eq!(px(&render_icon(30.0, BLUE), 16, 2), [0x1f, 0x6f, 0xeb, 255]);
+    }
+
+    #[test]
+    fn ring_ok_state_follows_the_accent_color() {
+        assert_eq!(px(&render_icon(30.0, PURPLE), 16, 2), [0x89, 0x57, 0xe5, 255]);
+        // crítico ignora a cor de destaque
+        assert_eq!(px(&render_icon(95.0, PURPLE), 16, 2), [0xf8, 0x51, 0x49, 255]);
     }
 
     #[test]
     fn zero_percent_is_all_track() {
-        assert_eq!(px(&render_icon(0.0), 16, 2), [0x6e, 0x76, 0x81, 255]);
+        assert_eq!(px(&render_icon(0.0, BLUE), 16, 2), [0x6e, 0x76, 0x81, 255]);
     }
 }
