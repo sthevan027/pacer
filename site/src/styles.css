@@ -47,8 +47,8 @@ h3 { font-size: 16px; font-weight: 500; }
 /* header */
 .header { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--border); background: color-mix(in oklab, var(--bg) 82%, transparent); backdrop-filter: blur(12px); }
 .header-row { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 16px; }
-.brand { font-size: 18px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
-.brand-mark { color: var(--accent); }
+.brand { font-size: 18px; font-weight: 600; display: flex; gap: 10px; align-items: center; }
+.logo { flex: none; display: block; }
 .nav { display: none; gap: 32px; font-size: 14px; color: var(--muted); }
 .nav a { padding-bottom: 4px; border-bottom: 2px solid transparent; }
 .nav a:hover { color: var(--text); }

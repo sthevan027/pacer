@@ -1,4 +1,5 @@
 import { pt } from "../content/pt";
+import { Logo } from "./Logo";
 import { LATEST_URL, REPO_URL } from "../lib/release";
 
 export function Header() {
@@ -7,7 +8,7 @@ export function Header() {
     <header className="header">
       <div className="container header-row">
         <a className="brand" href="#top">
-          <span className="brand-mark" aria-hidden="true">⚡</span> Pacer
+          <Logo /> Pacer
         </a>
         <nav className="nav" aria-label="Principal">
           <a href="#top" className="nav-active">{t.home}</a>
