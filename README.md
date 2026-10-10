@@ -45,6 +45,9 @@ continua leve.
   isso — é uma referência, não uma fatura. Modelo fora da tabela fica **sem**
   valor, e o painel avisa, em vez de chutar um número
 
+![Painel de uso](docs/screenshots/pacer-panel.png)
+![Detalhe do dia no gráfico](docs/screenshots/pacer-panel-tooltip.png)
+
 > O valor por modelo e por requisição é uma **estimativa a preço de API**
 > (tabela de preços lida em 10/10/2026). A cotação do dólar é editável em
 > Configurações → Valor estimado.
