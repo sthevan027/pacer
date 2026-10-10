@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { MainView } from "./components/MainView";
 import { SettingsView } from "./components/settings/SettingsView";
 import { TrayHover } from "./components/TrayHover";
@@ -11,9 +11,22 @@ type View = "main" | "settings";
 
 // A janela "hover" é uma janela nativa separada, pequena e fixa (sem auto-height nem o
 // estado de abas) que só mostra as barras de Sessão e Semanal perto do ícone da bandeja.
-const isHoverWindow = new URLSearchParams(window.location.search).get("view") === "hover";
+const view = new URLSearchParams(window.location.search).get("view");
+const isHoverWindow = view === "hover";
+const isPanelWindow = view === "panel";
+
+// Import dinâmico de propósito: o painel traz a biblioteca de gráfico, e o widget não pode
+// pagar por ela — assim o Vite joga o painel num chunk que só a janela dele carrega.
+const PanelView = lazy(() => import("./components/panel/PanelView"));
 
 export default function App() {
+  if (isPanelWindow) {
+    return (
+      <Suspense fallback={<p className="muted">Carregando…</p>}>
+        <PanelView />
+      </Suspense>
+    );
+  }
   return isHoverWindow ? <TrayHover /> : <MainApp />;
 }
 

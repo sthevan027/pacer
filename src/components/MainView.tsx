@@ -16,6 +16,9 @@ export function MainView({ state, now, onSettings }: { state: AppState; now: num
         sub="Uso dos planos de IA"
         actions={
           <>
+            <button className="ib" title="Painel de uso" onClick={() => invoke("open_panel")}>
+              <Icon name="chart" />
+            </button>
             <button className="ib" title="Atualizar agora" onClick={() => invoke("refresh_now")}>
               <Icon name="refresh" />
             </button>

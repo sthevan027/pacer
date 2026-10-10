@@ -86,6 +86,13 @@ pub struct Totals {
 }
 
 impl Totals {
+    /// Só desta resposta — usado pro custo por linha da tabela de requisições.
+    pub fn of(e: &UsageEvent) -> Self {
+        let mut t = Totals::default();
+        t.add(e);
+        t
+    }
+
     fn add(&mut self, e: &UsageEvent) {
         self.input += e.input;
         self.output += e.output;
@@ -166,6 +173,8 @@ pub struct RequestRow {
     pub output: u64,
     pub cache_read: u64,
     pub cache_write: u64,
+    /// `None` = modelo fora da tabela de preços.
+    pub cost_brl: Option<f64>,
 }
 
 /// Linha de ranking (top sessões e top projetos).
@@ -395,6 +404,7 @@ impl UsageStore {
                 output: e.output,
                 cache_read: e.cache_read,
                 cache_write: e.cache_write(),
+                cost_brl: pricing::price_for(&e.model).map(|p| pricing::cost_usd(p, &Totals::of(e)) * usd_brl),
             })
             .collect();
 
@@ -615,6 +625,12 @@ mod tests {
         // o modelo sem preço não ganha um valor inventado
         let sem_preco = r.by_model.iter().find(|m| m.model == "modelo-desconhecido").unwrap();
         assert_eq!(sem_preco.cost_brl, None);
+
+        // e a tabela de requisições leva o custo da linha
+        let com_preco = r.recent.iter().find(|x| x.model == "claude-sonnet-5").unwrap();
+        assert!((com_preco.cost_brl.unwrap() - 10.0).abs() < 1e-9);
+        let sem_preco_linha = r.recent.iter().find(|x| x.model == "modelo-desconhecido").unwrap();
+        assert_eq!(sem_preco_linha.cost_brl, None);
     }
 
     #[test]

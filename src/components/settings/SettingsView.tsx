@@ -4,6 +4,7 @@ import { ClaudeLogo, Icon } from "../../icons/icons";
 import type { AppState, Config } from "../../lib/types";
 import { Header } from "../Header";
 import { AccentPicker } from "./AccentPicker";
+import { RateInput } from "./RateInput";
 import { Row } from "./Row";
 import { Segmented } from "./Segmented";
 import { ThresholdBar } from "./ThresholdBar";
@@ -50,6 +51,16 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
         </div>
         <Row label="Cor de destaque" hint="Vale pro painel, pro hover da bandeja e pro ícone">
           <AccentPicker value={cfg.accentColor} onChange={(accentColor) => save({ accentColor })} />
+        </Row>
+      </section>
+
+      <section className="sec">
+        <div className="sh">
+          <Icon name="trend" />
+          Valor estimado
+        </div>
+        <Row label="Cotação do dólar" hint="Só para estimar o consumo a preço de API no painel de uso">
+          <RateInput value={cfg.usdBrl} onCommit={(usdBrl) => save({ usdBrl })} />
         </Row>
       </section>
 

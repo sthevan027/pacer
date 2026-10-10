@@ -1,7 +1,20 @@
 import type { ReactNode } from "react";
 import claudeSvg from "./claude.svg?raw";
 
-export type IconName = "refresh" | "gear" | "back" | "sliders" | "bell" | "plug" | "plus" | "alert" | "trend" | "palette";
+export type IconName =
+  | "refresh"
+  | "gear"
+  | "back"
+  | "sliders"
+  | "bell"
+  | "plug"
+  | "plus"
+  | "alert"
+  | "trend"
+  | "palette"
+  | "chart"
+  | "download"
+  | "folder";
 
 const PATHS: Record<IconName, ReactNode> = {
   refresh: (
@@ -51,6 +64,14 @@ const PATHS: Record<IconName, ReactNode> = {
       <circle cx="15.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
     </>
   ),
+  chart: <path d="M3 3v18h18M7 16v-5M12 16V8M17 16v-9" />,
+  download: (
+    <>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5 5 5-5M12 15V3" />
+    </>
+  ),
+  folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
 };
 
 export function Icon({ name, size = 15 }: { name: IconName; size?: number }) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAgo, formatDay, formatDuration, formatTokens } from "./format";
+import { formatAgo, formatBrl, formatDay, formatDuration, formatStamp, formatTokens, formatUsd } from "./format";
 
 const MIN = 60_000;
 
@@ -38,5 +38,28 @@ describe("formatDay", () => {
   it("formata dia e mês curto sem depender do fuso", () => {
     expect(formatDay("2026-09-12")).toBe("12 set");
     expect(formatDay("2026-01-01")).toBe("1 jan");
+  });
+});
+
+describe("moeda", () => {
+  // O Intl do pt-BR separa o "R$" com espaço NÃO separável (U+00A0), não com espaço comum.
+  // Não troque por um espaço normal: o teste passa a falhar por um caractere invisível.
+  const NBSP = " ";
+
+  it("formata em real e em dólar", () => {
+    expect(formatBrl(1234.5)).toBe(`R$${NBSP}1.234,50`);
+    expect(formatUsd(4)).toBe("$4.00");
+  });
+
+  it("não perde valores pequenos, que são a maioria das linhas", () => {
+    expect(formatBrl(0.03)).toBe(`R$${NBSP}0,03`);
+    expect(formatBrl(0)).toBe(`R$${NBSP}0,00`);
+  });
+});
+
+describe("formatStamp", () => {
+  it("mostra dia, mês, hora e minuto", () => {
+    const d = new Date(2026, 9, 10, 9, 4);
+    expect(formatStamp(d.toISOString())).toBe("10/10 09:04");
   });
 });

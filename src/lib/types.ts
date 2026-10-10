@@ -43,6 +43,8 @@ export interface Config {
   startWithWindows: boolean;
   refreshMinutes: number;
   accentColor: string;
+  /** Cotação US$→R$ para estimar o consumo a preço de API. */
+  usdBrl: number;
   alerts: AlertsConfig;
   providers: { claude: { enabled: boolean } };
 }
