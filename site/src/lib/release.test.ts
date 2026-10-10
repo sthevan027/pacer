@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FALLBACK_INSTALLER_URL, fetchReleases, formatSize, installerUrl, parseReleases, pickInstaller } from "./release";
+import { FALLBACK_INSTALLER_URL, fetchReleases, formatSize, installerUrl, parseHighlights, parseReleases, pickInstaller } from "./release";
 import { isWindows } from "./platform";
 
 const asset = (name: string) => ({ name, size: 2_411_724, browser_download_url: `https://x/${name}` });
@@ -53,6 +53,25 @@ describe("release", () => {
 
   it("formata tamanho em MB pt-BR", () => {
     expect(formatSize(2_411_724)).toBe("2,3 MB");
+  });
+});
+
+describe("parseHighlights", () => {
+  it("lê os itens de Novidades, junta continuações e limpa PRs/imagens, parando em Instalação", () => {
+    const body = "## Novidades\n\n- **Popup** — aparece perto do ícone,\n  sem abrir o painel (#3)\n- **Cor** — 5 presets (#4)\n\n![img](https://x/a.png)\n\n## Instalação\n\n- baixe o `.exe`";
+    expect(parseHighlights(body)).toEqual(["**Popup** — aparece perto do ícone, sem abrir o painel", "**Cor** — 5 presets"]);
+  });
+
+  it("para em seções de assinatura e limita a 5 itens", () => {
+    const body = "# Pacer 2.0.1\n\n## Correções\n\n" + Array.from({ length: 7 }, (_, i) => `- item ${i}`).join("\n") + "\n\n## Agora assinado ✍️\n\n- não entra";
+    const list = parseHighlights(body);
+    expect(list).toHaveLength(5);
+    expect(list).not.toContain("não entra");
+  });
+
+  it("devolve vazio sem notas e entra em ReleaseInfo", () => {
+    expect(parseHighlights(null)).toEqual([]);
+    expect(parseReleases([{ ...rel("v2.1.0"), body: "- um\n- dois" }])[0].highlights).toEqual(["um", "dois"]);
   });
 });
 

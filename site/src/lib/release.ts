@@ -21,6 +21,8 @@ export interface ReleaseInfo {
   title: string;
   date: string;
   url: string;
+  /** Resumo do que mudou, extraído das notas da release (até 5 itens; `**negrito**` marca o destaque). */
+  highlights: string[];
   installer?: { url: string; sizeBytes: number };
 }
 
@@ -34,6 +36,7 @@ interface RawRelease {
   name: string | null;
   html_url: string;
   published_at: string | null;
+  body?: string | null;
   draft: boolean;
   prerelease: boolean;
   assets: RawAsset[];
@@ -44,6 +47,48 @@ export function pickInstaller(assets: RawAsset[]): RawAsset | undefined {
   return assets.find((a) => /_x64-setup\.exe$/i.test(a.name));
 }
 
+/** Seções das notas que não são "o que mudou": instalação, requisitos, assinatura/hash. */
+const SKIP_SECTION = /instala|requisit|assinad|sha-?256|⚠/i;
+
+/** Lê os itens de lista das notas, parando na primeira seção que não é de mudanças. */
+export function parseHighlights(body: string | null | undefined, max = 5): string[] {
+  if (!body) return [];
+  const items: string[] = [];
+  let current: string | null = null;
+  const flush = () => {
+    if (current) items.push(clean(current));
+    current = null;
+  };
+  for (const line of body.split(/\r?\n/)) {
+    if (/^#{1,6}\s/.test(line)) {
+      flush();
+      if (SKIP_SECTION.test(line)) break;
+      continue;
+    }
+    const bullet = line.match(/^\s*[-*]\s+(.*)$/);
+    if (bullet) {
+      flush();
+      current = bullet[1];
+    } else if (current && /^\s+\S/.test(line)) {
+      current += " " + line.trim(); // continuação de um item
+    } else {
+      flush();
+    }
+  }
+  flush();
+  return items.filter(Boolean).slice(0, max);
+}
+
+function clean(text: string): string {
+  return text
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "") // imagens
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // links → texto
+    .replace(/\s*\(#\d+\)/g, "") // referências de PR
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function toReleaseInfo(raw: RawRelease): ReleaseInfo {
   const asset = pickInstaller(raw.assets ?? []);
   return {
@@ -51,6 +96,7 @@ export function toReleaseInfo(raw: RawRelease): ReleaseInfo {
     title: raw.name && raw.name !== raw.tag_name ? raw.name : `Pacer ${raw.tag_name.replace(/^v/, "")}`,
     date: raw.published_at ?? "",
     url: raw.html_url,
+    highlights: parseHighlights(raw.body),
     installer: asset ? { url: asset.browser_download_url, sizeBytes: asset.size } : undefined,
   };
 }
