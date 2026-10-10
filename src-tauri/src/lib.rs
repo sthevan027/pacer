@@ -2,11 +2,13 @@ pub mod alerts;
 pub mod commands;
 pub mod config;
 pub mod pacing;
+pub mod panel;
 pub mod providers;
 pub mod scheduler;
 pub mod snapshot;
 pub mod state;
 pub mod tray;
+pub mod usage;
 pub mod window;
 
 use std::sync::Arc;
@@ -54,6 +56,9 @@ pub fn run() {
             commands::save_config,
             commands::refresh_now,
             commands::hide_window,
+            commands::open_panel,
+            commands::get_usage_report,
+            commands::export_usage_csv,
             window::set_window_height,
         ])
         .run(tauri::generate_context!())

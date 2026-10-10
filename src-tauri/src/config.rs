@@ -38,12 +38,19 @@ pub struct ProvidersConfig {
 pub const DEFAULT_ACCENT: &str = "#1f6feb";
 pub const ACCENT_PRESETS: [&str; 5] = ["#1f6feb", "#8957e5", "#2ea043", "#db61a2", "#39c5cf"];
 
+/// Cotação US$→R$ usada só para estimar o consumo a preço de API no painel. É uma referência
+/// (BCB, 06/10/2026), não uma verdade: quem decide o valor é o usuário, nas Configurações.
+pub const DEFAULT_USD_BRL: f64 = 4.97;
+/// Faixa aceita; fora dela (ou NaN) volta pro padrão.
+const USD_BRL_RANGE: std::ops::RangeInclusive<f64> = 0.5..=20.0;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Config {
     pub start_with_windows: bool,
     pub refresh_minutes: u32,
     pub accent_color: String,
+    pub usd_brl: f64,
     pub alerts: AlertsConfig,
     pub providers: ProvidersConfig,
 }
@@ -54,6 +61,7 @@ impl Default for Config {
             start_with_windows: true,
             refresh_minutes: 5,
             accent_color: DEFAULT_ACCENT.to_string(),
+            usd_brl: DEFAULT_USD_BRL,
             alerts: AlertsConfig::default(),
             providers: ProvidersConfig::default(),
         }
@@ -67,6 +75,9 @@ impl Config {
         }
         if !ACCENT_PRESETS.contains(&self.accent_color.as_str()) {
             self.accent_color = DEFAULT_ACCENT.to_string();
+        }
+        if !self.usd_brl.is_finite() || !USD_BRL_RANGE.contains(&self.usd_brl) {
+            self.usd_brl = DEFAULT_USD_BRL;
         }
         self.alerts.thresholds.retain(|t| (1..=100).contains(t));
         self.alerts.thresholds.sort_unstable();
@@ -196,6 +207,37 @@ mod tests {
         let mut c = Config { accent_color: ACCENT_PRESETS[2].to_string(), ..Config::default() };
         c = c.normalized();
         assert_eq!(c.accent_color, ACCENT_PRESETS[2]);
+    }
+
+    #[test]
+    fn usd_brl_defaults_and_survives_a_roundtrip() {
+        assert_eq!(Config::default().usd_brl, DEFAULT_USD_BRL);
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        save(&p, &Config { usd_brl: 5.75, ..Config::default() }).unwrap();
+        assert_eq!(load(&p).usd_brl, 5.75);
+        // camelCase no arquivo, como o resto
+        assert!(fs::read_to_string(&p).unwrap().contains("\"usdBrl\": 5.75"));
+    }
+
+    #[test]
+    fn absurd_exchange_rates_fall_back_to_the_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        for bruto in ["0", "-3", "999", "null"] {
+            fs::write(&p, format!(r#"{{"usdBrl":{bruto}}}"#)).unwrap();
+            assert_eq!(load(&p).usd_brl, DEFAULT_USD_BRL, "aceitou {bruto}");
+        }
+    }
+
+    #[test]
+    fn config_without_usd_brl_gets_the_default() {
+        // arquivo escrito antes deste campo existir
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        fs::write(&p, r#"{"refreshMinutes":10}"#).unwrap();
+        assert_eq!(load(&p).usd_brl, DEFAULT_USD_BRL);
+        assert_eq!(load(&p).refresh_minutes, 10);
     }
 
     #[test]

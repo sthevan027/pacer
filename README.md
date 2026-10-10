@@ -25,6 +25,33 @@ Widget para Windows que mostra quanto do seu plano de IA você já usou — e
 ![Configurações](docs/screenshots/pacer-settings.png)
 ![Aparência](docs/screenshots/pacer-appearance.png)
 
+## Painel de uso
+
+Clique no ícone de gráfico no cabeçalho do widget (ou em **Abrir painel de uso**,
+no menu da bandeja) para abrir uma janela à parte com o consumo detalhado. É uma
+janela normal, que nasce só quando você abre e é destruída ao fechar — o widget
+continua leve.
+
+- **Por dia e por tier**: gráfico empilhado de Opus/Sonnet/Haiku, com filtro de
+  período (7/14/30 dias) e de tier. A métrica do gráfico é escolhível, porque
+  cache lido costuma ser ordens de grandeza maior que entrada + saída
+- **Por modelo**: entrada, saída, cache lido e cache criado separados — o cache
+  **não** entra somado ao consumo, que era o que inflava o número
+- **Rankings**: quais sessões e quais projetos mais consumiram
+- **Registros**: as 200 requisições mais recentes, e **Exportar CSV** (gravado
+  em Downloads) com as mesmas colunas
+- **Valor estimado** a preço de API, em R$, usando a tabela oficial de preços e
+  a cotação que você define nas Configurações. Quem usa assinatura não paga
+  isso — é uma referência, não uma fatura. Modelo fora da tabela fica **sem**
+  valor, e o painel avisa, em vez de chutar um número
+
+![Painel de uso](docs/screenshots/pacer-panel.png)
+![Detalhe do dia no gráfico](docs/screenshots/pacer-panel-tooltip.png)
+
+> O valor por modelo e por requisição é uma **estimativa a preço de API**
+> (tabela de preços lida em 10/10/2026). A cotação do dólar é editável em
+> Configurações → Valor estimado.
+
 ## Requisitos
 
 - Windows 10/11
@@ -59,6 +86,10 @@ Testes: `cargo test --manifest-path src-tauri/Cargo.toml` e `bun run test`.
 - O token nunca chega na interface; fica só no processo Rust.
 - Só conversa com `api.anthropic.com`. Sem telemetria.
 - Configuração em `%APPDATA%\dev.sthevan.pacer\config.json`.
+- O painel lê os logs locais do Claude Code e por isso mostra **nomes de
+  pasta de projeto e identificadores de sessão**. Isso fica só na sua máquina,
+  mas atenção: o **CSV exportado contém esses nomes** — não publique o arquivo
+  sem olhar.
 
 ## Créditos
 

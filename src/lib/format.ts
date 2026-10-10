@@ -32,3 +32,22 @@ export function formatDay(isoDate: string): string {
   const [, m, d] = isoDate.split("-").map(Number);
   return `${d} ${MONTHS[m - 1]}`;
 }
+
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+/** Valor estimado a preço de API, em reais. */
+export function formatBrl(v: number): string {
+  return brl.format(v);
+}
+
+export function formatUsd(v: number): string {
+  return usd.format(v);
+}
+
+/** "2026-10-10T12:34:00Z" → "10/10 09:34" (horário local). */
+export function formatStamp(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
