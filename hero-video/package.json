@@ -6,6 +6,7 @@
   "scripts": {
     "studio": "remotion studio",
     "render": "remotion render src/index.ts Hero out/hero.mp4",
+    "render:social": "remotion render src/index.ts Social out/social.mp4",
     "still": "remotion still src/index.ts Hero out/poster.png --frame=250"
   },
   "dependencies": {

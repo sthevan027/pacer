@@ -2,20 +2,20 @@ import { AbsoluteFill, Audio, Easing, interpolate, spring, staticFile, useCurren
 import type { CSSProperties, ReactNode } from "react";
 
 export const FPS = 30;
-const s = (sec: number) => Math.round(sec * FPS);
+export const s = (sec: number) => Math.round(sec * FPS);
 export const DURATION = s(21.2);
 
 // Tokens do app/landing.
-const C = { bg: "#0d1117", card: "#151b23", card2: "#10151c", surface: "#1c232d", border: "#272f3a", text: "#e6edf3", muted: "#8b949e", warn: "#d29922", crit: "#f85149" };
-const ACCENTS = ["#1f6feb", "#8957e5", "#2ea043", "#db61a2"]; // Azul, Roxo, Verde, Rosa (presets do app)
-const FONT = `Inter, "Segoe UI", system-ui, sans-serif`;
-const MONO = `"DejaVu Sans Mono", ui-monospace, monospace`;
+export const C = { bg: "#0d1117", card: "#151b23", card2: "#10151c", surface: "#1c232d", border: "#272f3a", text: "#e6edf3", muted: "#8b949e", warn: "#d29922", crit: "#f85149" };
+export const ACCENTS = ["#1f6feb", "#8957e5", "#2ea043", "#db61a2"]; // Azul, Roxo, Verde, Rosa (presets do app)
+export const FONT = `Inter, "Segoe UI", system-ui, sans-serif`;
+export const MONO = `"DejaVu Sans Mono", ui-monospace, monospace`;
 
-const ease = Easing.bezier(0.16, 1, 0.3, 1);
-const inOut = Easing.inOut(Easing.cubic);
-const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+export const ease = Easing.bezier(0.16, 1, 0.3, 1);
+export const inOut = Easing.inOut(Easing.cubic);
+export const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 /** progresso 0→1 entre dois instantes (em segundos) */
-const P = (f: number, a: number, b: number, e: (t: number) => number = ease) => interpolate(f, [s(a), s(b)], [0, 1], { ...clamp, easing: e });
+export const P = (f: number, a: number, b: number, e: (t: number) => number = ease) => interpolate(f, [s(a), s(b)], [0, 1], { ...clamp, easing: e });
 
 /** Cor de destaque: azul; troca durante "combina com a sua cor" (13,9–15,2 s). */
 function accentAt(t: number) {
@@ -26,11 +26,11 @@ function accentAt(t: number) {
   return ACCENTS[0];
 }
 
-const toneOf = (pct: number, accent: string) => (pct >= 90 ? C.crit : pct >= 75 ? C.warn : accent);
+export const toneOf = (pct: number, accent: string) => (pct >= 90 ? C.crit : pct >= 75 ? C.warn : accent);
 
 /* ---------- peças ---------- */
 
-const Ring = ({ size, color, stroke }: { size: number; color: string; stroke: number }) => (
+export const Ring = ({ size, color, stroke }: { size: number; color: string; stroke: number }) => (
   <svg width={size} height={size} viewBox="0 0 1024 1024">
     <circle cx="512" cy="512" r="300" fill="none" stroke="#2d333b" strokeWidth={stroke} />
     <path d="M512 212 A300 300 0 1 1 252 662" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" />
@@ -38,7 +38,7 @@ const Ring = ({ size, color, stroke }: { size: number; color: string; stroke: nu
   </svg>
 );
 
-const Bar = ({ pct, forecast, color, h = 12 }: { pct: number; forecast: number; color: string; h?: number }) => (
+export const Bar = ({ pct, forecast, color, h = 12 }: { pct: number; forecast: number; color: string; h?: number }) => (
   <div style={{ position: "relative", height: h, borderRadius: 99, background: "#2a313b" }}>
     <div style={{ height: "100%", width: `${pct}%`, borderRadius: 99, background: color }} />
     <div style={{ position: "absolute", top: -h * 0.45, left: `${Math.min(forecast, 99.4)}%`, width: 3, height: h * 1.9, borderRadius: 2, background: "rgba(230,237,243,.85)" }} />
@@ -46,7 +46,7 @@ const Bar = ({ pct, forecast, color, h = 12 }: { pct: number; forecast: number; 
 );
 
 /** Painel do app (print 1), com dados fictícios. `t` = segundos do vídeo. */
-const Panel = ({ t, accent, frame }: { t: number; accent: string; frame: number }) => {
+export const Panel = ({ t, accent, frame }: { t: number; accent: string; frame: number }) => {
   const sess = 12 * P(frame, 3.0, 4.2);
   const weekly = 97 * P(frame, 3.4, 6.0, Easing.inOut(Easing.quad));
   const wTone = toneOf(weekly, accent);
@@ -106,7 +106,7 @@ const Panel = ({ t, accent, frame }: { t: number; accent: string; frame: number 
 };
 
 /** Popup da bandeja (print 2). */
-const TrayPopup = ({ accent }: { accent: string }) => (
+export const TrayPopup = ({ accent }: { accent: string }) => (
   <div style={{ width: 600, background: "#12171d", border: `1px solid ${C.border}`, borderRadius: 20, padding: 26, fontFamily: FONT, color: C.text, boxShadow: `0 30px 80px -10px rgba(0,0,0,.8), 0 0 90px -20px ${accent}77` }}>
     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 21 }}><b>Sessão (5h)</b><span style={{ color: C.muted }}>Redefine em 3h 40m</span></div>
     <div style={{ marginTop: 12 }}><Bar pct={12} forecast={46} color={accent} h={14} /></div>
@@ -117,7 +117,7 @@ const TrayPopup = ({ accent }: { accent: string }) => (
   </div>
 );
 
-const Taskbar = ({ iconPulse, hover }: { iconPulse: number; hover: number }) => (
+export const Taskbar = ({ iconPulse, hover }: { iconPulse: number; hover: number }) => (
   <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 72, background: "rgba(18,22,28,.94)", borderTop: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 26, padding: "0 28px", fontFamily: FONT, color: C.text }}>
     <span style={{ color: C.muted, fontSize: 22, fontFamily: "DejaVu Sans" }}>⌃</span>
     <div style={{ width: 26, height: 26, borderRadius: 99, background: "#2a313b" }} />
@@ -132,7 +132,7 @@ const Taskbar = ({ iconPulse, hover }: { iconPulse: number; hover: number }) => 
   </div>
 );
 
-const Toast = ({ accent: _a }: { accent: string }) => (
+export const Toast = ({ accent: _a }: { accent: string }) => (
   <div style={{ width: 540, background: "#1b2129", border: `1px solid ${C.border}`, borderRadius: 16, padding: "20px 24px", display: "flex", gap: 20, alignItems: "center", fontFamily: FONT, color: C.text, boxShadow: "0 24px 60px -10px rgba(0,0,0,.8)" }}>
     <Ring size={64} color={C.crit} stroke={88} />
     <div>
@@ -143,7 +143,7 @@ const Toast = ({ accent: _a }: { accent: string }) => (
   </div>
 );
 
-const Cursor = ({ x, y, press }: { x: number; y: number; press: number }) => (
+export const Cursor = ({ x, y, press }: { x: number; y: number; press: number }) => (
   <svg width="44" height="44" viewBox="0 0 24 24" style={{ position: "absolute", left: x, top: y, transform: `scale(${1 - press * 0.15})`, filter: "drop-shadow(0 4px 6px rgba(0,0,0,.6))", zIndex: 50 }}>
     <path d="M4 2 L4 19 L8.6 14.8 L11.6 21.6 L14.2 20.4 L11.2 13.7 L17.5 13.4 Z" fill="#fff" stroke="#111" strokeWidth="1.2" strokeLinejoin="round" />
   </svg>
