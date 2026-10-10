@@ -1,7 +1,11 @@
-# Pacer — Painel de uso (preparação)
+# Pacer — Painel de uso
 
-Data: 2026-10-09 (preparação para a janela de execução de 2026-10-10)
-Status: **rascunho / estudo** — nenhum código foi alterado por este documento.
+Data: 2026-10-09 (preparação) · executado em 2026-10-09/10
+Status: **implementado** na branch `feat/painel-de-uso`.
+
+> As seções 1–7 são o estudo original e continuam valendo como contexto. As
+> **decisões tomadas** e o que de fato foi entregue estão nas seções 8 e 10;
+> a seção 9 (roteiro) ficou como registro do plano.
 
 ## 1. Objetivo
 
@@ -153,15 +157,31 @@ Decidir amanhã.
    Pacers (dois ícones, mesmo `EBWebView`). Não bloqueia o painel, mas fica pior com mais
    uma janela. Candidato a PR próprio (`tauri-plugin-single-instance`).
 
-## 8. Perguntas em aberto (decidir amanhã)
+## 8. Decisões tomadas
 
-1. Janela de amanhã: painel, Etapa B, ou os dois (e em que ordem)?
-2. Tema: o painel segue a **cor de destaque** do usuário ou tem paleta fixa por modelo como a
-   referência (uma cor por tier)? Sugestão: cores por modelo fixas + destaque nos controles.
-3. Moeda do valor estimado: R$, US$ ou ambos? Câmbio fixo configurável ou buscado?
-4. Entrada visível: só menu da bandeja, ou botão no widget também?
-5. Painel vale também para os provedores da Etapa B desde já (filtro de provedor) ou só Claude no começo?
-6. Gráfico: SVG próprio ou biblioteca?
+| # | Pergunta | Decisão | Contra a sugestão da spec? |
+|---|---|---|---|
+| 1 | Escopo da janela | **Só o painel**; a Etapa B fica para outro bloco | — |
+| 2 | Cores | **Tudo com a cor de destaque** do usuário, sem paleta fixa por tier | sim (sugeria cores fixas) |
+| 3 | Moeda | **R$ com câmbio fixo configurável** nas Configurações | sim (é a fatia 4, fora do MVP sugerido) |
+| 4 | Entrada | Menu da bandeja **e** botão no cabeçalho do widget | sim (a spec deixava em aberto) |
+| 5 | Provedores | Só Claude agora, mas o modelo de dados já é independente de provedor | — |
+| 6 | Gráfico | **Biblioteca (Recharts)**, não SVG na mão | sim (sugeria SVG) |
+
+Consequência da decisão 2, que precisou de uma saída própria: se todas as famílias usam a mesma
+cor, a pilha do gráfico não distingue nada. Resolvido variando a **mistura com o branco**
+(`color-mix`), de 100% a 45% do accent — os tons continuam todos sendo a cor de destaque, mas
+cada tier tem o seu. Usa o mesmo `color-mix` que o `--accent-2` já usava.
+
+Consequência da decisão 3: entrou `usdBrl` na `Config` (padrão 4,97 — referência do BCB em
+06/10/2026 —, editável), e um campo que só grava ao sair do foco, senão o valor salvo reformata
+o campo a cada tecla.
+
+Consequência da decisão 6: o Recharts pesa ~367 kB. O painel entra por `import()` dinâmico, então
+ele sai num chunk que só a janela do painel carrega — o widget continua com os mesmos 243 kB.
+
+**Não implementado** (fica registrado como pendência): os marcos de limite (`quotaLimits`) da
+fatia 5. As abas Visão geral/Registros entraram.
 
 ## 9. Sugestão de roteiro para 3 h (se o painel for o foco)
 
@@ -176,3 +196,37 @@ Decidir amanhã.
 
 Fatias 3–5 ficam para o bloco seguinte. Se a Etapa B tiver que entrar também, ela
 começa depois do MVP do painel.
+
+## 10. O que foi entregue, e o que a execução ensinou
+
+Todas as fatias 1–4 saíram, mais as abas da fatia 5. Comunicação e comandos:
+
+- `usage/` (novo): `UsageEvent`, `UsageStore`, `UsageReport`, `pricing.rs`.
+- `panel.rs` (novo): janela `panel`, criada fora da thread principal (risco 7.1).
+- `LogScanner` deixou de viver **dentro** do `ClaudeProvider`: o provedor vive dentro do laço do
+  scheduler, então o scanner era inalcançável por um comando Tauri. Foi para o `Shared`, e o
+  provedor guarda um `Arc<Mutex<UsageStore>>`. O contrato do widget não mudou.
+- Comandos `get_usage_report` e `export_usage_csv`, ambos `async` +
+  `spawn_blocking` — são chamados de dentro do WebView e não podem travar a thread principal.
+
+Achados que valem lembrar:
+
+1. **O parser contra os logs reais.** 7.939 eventos nos últimos 30 dias. Os totais conferiram
+   exatamente com uma segunda implementação independente (escrita só para conferir), o que
+   validou a janela de 30 dias, o fuso local, a deduplicação e a divisão do cache. Vale repetir
+   esse truque em mudança de parser: os testes de unidade não pegam erro de recorte de janela.
+2. **A escrita de cache de 1 h domina.** Na amostra, 45,4 M contra 3,8 M da de 5 min — 12× maior,
+   e 1,6× mais cara por token. Somar as duas numa taxa só (como a spec simplificava) subestimaria
+   o valor de forma relevante. O log já traz a divisão; usar é de graça.
+3. **Deduplicar por (sessão, timestamp, modelo) é errado.** Foi o primeiro rascunho, e o teste
+   pegou: duas requisições diferentes no mesmo segundo e no mesmo modelo viravam uma. A identidade
+   é `message.id` + `requestId` — o que o código original já fazia.
+4. **A janela abre no topo.** Na primeira abertura o painel aparecia rolado até o fim: enquanto o
+   relatório não chega o conteúdo é curto, e o crescimento do gráfico depois deixa o contêiner
+   rolado lá embaixo. Corrigido com um scroll pro topo só na primeira carga — o painel se
+   atualiza sozinho a cada 10 s e não pode roubar o scroll de quem está lendo.
+
+Sobre o valor em R$, para quem for mexer depois: a tabela de preços é um `const` em `pricing.rs`
+com a **fonte e a data** no comentário do módulo, e o casamento é por **prefixo mais longo** —
+`claude-opus-5-5` não pode cair no preço do `claude-opus-5`, e `claude-haiku-4-5-20251001`
+(id com data) tem que cair no `claude-haiku-4-5`. Preço desatualizado se corrige ali.
