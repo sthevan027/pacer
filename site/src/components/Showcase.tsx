@@ -1,5 +1,5 @@
 import { pt } from "../content/pt";
-import { UsageBar } from "./UsageWidget";
+import { UsageBar } from "./UsageBar";
 
 // Espelha ACCENT_PRESETS de src/lib/accent.ts do app.
 export const ACCENTS = [
@@ -50,8 +50,8 @@ export function Showcase({ accent, onAccent }: { accent: string; onAccent: (hex:
         </div>
         <div className="stack mt">
           <UsageBar label={a.normal} pct={35} forecast={60} reset="2h" />
-          <UsageBar label={a.warn} pct={82} forecast={95} reset="1d" tone="warn" />
-          <UsageBar label={a.crit} pct={96} forecast={100} reset="4h" tone="crit" />
+          <UsageBar label={a.warn} pct={82} forecast={95} reset="1d" />
+          <UsageBar label={a.crit} pct={96} forecast={100} reset="4h" />
         </div>
       </div>
     </section>

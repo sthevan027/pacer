@@ -15,7 +15,7 @@ export default function App() {
   const list = releases.status === "ready" ? releases.releases : undefined;
   return (
     <div style={{ "--accent": accent } as CSSProperties}>
-      <Header />
+      <Header release={list?.[0]} />
       <main>
         <Hero release={list?.[0]} />
         <Features />
