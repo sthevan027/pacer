@@ -1,7 +1,7 @@
 use crate::snapshot::Snapshot;
 use crate::window::{self, Rect};
 use std::f64::consts::TAU;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::image::Image;
@@ -115,19 +115,49 @@ fn hover_window(app: &AppHandle) -> Option<WebviewWindow> {
     Some(win)
 }
 
+/// O mouse ainda está em cima do ícone? Usado pela criação assíncrona da janela: se o mouse já
+/// saiu quando o WebView ficar pronto, não faz sentido mostrar o popup.
+static HOVER_WANTED: AtomicBool = AtomicBool::new(false);
+/// Evita duas threads construindo a janela ao mesmo tempo (Enter repetido durante a criação).
+static HOVER_BUILDING: AtomicBool = AtomicBool::new(false);
+
 /// Mostra a janelinha de hover posicionada perto do ícone, com as barras de Sessão e Semanal.
 /// Não aparece se o painel principal já estiver em primeiro plano (evita sobrepor UI).
 fn show_hover(app: &AppHandle, tray_rect: tauri::Rect) {
     HOVER_GEN.fetch_add(1, Ordering::SeqCst);
+    HOVER_WANTED.store(true, Ordering::SeqCst);
     if app.get_webview_window("main").is_some_and(|w| w.is_focused().unwrap_or(false)) {
         return;
     }
-    let Some(win) = hover_window(app) else { return };
+    if let Some(win) = app.get_webview_window("hover") {
+        place_and_show(&win, tray_rect);
+        return;
+    }
+    // Este handler roda na thread principal. `WebviewWindowBuilder::build` dá deadlock no
+    // Windows quando chamado daqui (doc do Tauri): o WebView2 nunca termina de nascer e a thread
+    // principal trava, deixando o cursor de "carregando" em cima do widget e da bandeja. Por isso
+    // a 1ª criação acontece numa thread à parte; a thread principal segue livre pra bombear mensagens.
+    if HOVER_BUILDING.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let win = hover_window(&app);
+        HOVER_BUILDING.store(false, Ordering::SeqCst);
+        if let Some(win) = win {
+            if HOVER_WANTED.load(Ordering::SeqCst) {
+                place_and_show(&win, tray_rect);
+            }
+        }
+    });
+}
+
+fn place_and_show(win: &WebviewWindow, tray_rect: tauri::Rect) {
     let scale = win.scale_factor().unwrap_or(1.0);
     let pos = tray_rect.position.to_physical::<i32>(scale);
     let size = tray_rect.size.to_physical::<u32>(scale);
     let tray = Rect { x: pos.x, y: pos.y, w: size.width as i32, h: size.height as i32 };
-    let Some(area) = window::work_area(&win) else { return };
+    let Some(area) = window::work_area(win) else { return };
     let margin = (f64::from(HOVER_MARGIN) * scale).round() as i32;
     let w = (f64::from(HOVER_W) * scale).round() as i32;
     let h = (f64::from(HOVER_H) * scale).round() as i32;
@@ -138,6 +168,7 @@ fn show_hover(app: &AppHandle, tray_rect: tauri::Rect) {
 
 /// Esconde o hover depois de `HOVER_HIDE_DELAY`, a menos que um `Enter` novo cancele antes.
 fn hide_hover_later(app: &AppHandle) {
+    HOVER_WANTED.store(false, Ordering::SeqCst);
     let gen = HOVER_GEN.fetch_add(1, Ordering::SeqCst) + 1;
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
