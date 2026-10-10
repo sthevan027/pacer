@@ -15,15 +15,11 @@ function DownloadButton({ release }: { release?: ReleaseInfo }) {
     );
   }
   const installer = release?.installer;
-  const meta = installer
-    ? `${release!.version} · ${formatSize(installer.sizeBytes)} · ${t.fallbackMeta}`
-    : release
-      ? `${release.version} · ${t.fallbackMeta}`
-      : t.fallbackMeta;
+  const meta = release?.version;
   return (
     <a className="cta" href={installer?.url ?? LATEST_URL} rel="noopener">
       <span aria-hidden="true">▦</span> {t.cta}
-      <span className="cta-meta mono">{meta}</span>
+      {meta && <span className="cta-meta mono">{meta}</span>}
     </a>
   );
 }
@@ -39,7 +35,11 @@ export function Hero({ release }: { release?: ReleaseInfo }) {
           <h1>{t.titleA}<span className="accent">{t.titleB}</span></h1>
           <p className="lead">{t.subtitle}</p>
           <DownloadButton release={release} />
-          <p className="tiny muted hero-meta">{t.meta}</p>
+          <p className="tiny muted hero-meta">
+            {t.metaBefore}
+            {release?.installer && ` · ${formatSize(release.installer.sizeBytes)}`}
+            {t.metaAfter}
+          </p>
         </div>
         <figure className="stage">
           <video
