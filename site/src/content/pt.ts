@@ -10,6 +10,8 @@ export const pt = {
     ctaGithub: "Ver no GitHub",
     meta: "Windows 10/11 · Grátis · Código aberto",
     fallbackMeta: "instalador .exe",
+    videoLabel: "Vídeo de 15 segundos mostrando o Pacer: o widget com as barras de Sessão e Semanal, a previsão de ritmo, a bandeja e a troca de cor de destaque, com narração em português",
+    videoCaption: "● Assista ao Pacer em ação (0:15) · com som",
   },
   widget: {
     session: "Sessão (5h)",

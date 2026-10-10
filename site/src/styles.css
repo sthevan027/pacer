@@ -70,6 +70,7 @@ h1 { margin-top: 20px; font-size: clamp(38px, 9vw, 60px); font-weight: 600; line
 .hero-meta { margin-top: 20px; }
 
 .stage { border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); overflow: hidden; box-shadow: var(--glow); }
+.stage-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: var(--bg); }
 .stage-art { position: relative; aspect-ratio: 16 / 10; background: radial-gradient(120% 90% at 10% 100%, color-mix(in oklab, var(--accent) 70%, transparent), transparent 55%), radial-gradient(80% 70% at 35% 40%, color-mix(in oklab, var(--accent) 35%, transparent), transparent 60%), var(--bg); }
 .stage-widget { position: absolute; right: 16px; top: 16px; width: min(58%, 340px); }
 .stage-cap { padding: 10px 16px; border-top: 1px solid var(--border); }

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { pt } from "../content/pt";
 import { formatSize, LATEST_URL, REPO_URL, type ReleaseInfo } from "../lib/release";
 import { isWindows } from "../lib/platform";
-import { UsageWidget } from "./UsageWidget";
 
 function DownloadButton({ release }: { release?: ReleaseInfo }) {
   const t = pt.hero;
@@ -43,10 +42,18 @@ export function Hero({ release }: { release?: ReleaseInfo }) {
           <p className="tiny muted hero-meta">{t.meta}</p>
         </div>
         <figure className="stage">
-          <div className="stage-art">
-            <div className="stage-widget"><UsageWidget /></div>
-          </div>
-          <figcaption className="stage-cap tiny muted">{pt.widget.caption}</figcaption>
+          <video
+            className="stage-video"
+            controls
+            playsInline
+            preload="metadata"
+            poster="media/poster.jpg"
+            aria-label={pt.hero.videoLabel}
+          >
+            <source src="media/hero.webm" type="video/webm" />
+            <source src="media/hero.mp4" type="video/mp4" />
+          </video>
+          <figcaption className="stage-cap tiny muted">{pt.hero.videoCaption}</figcaption>
         </figure>
       </div>
     </section>
