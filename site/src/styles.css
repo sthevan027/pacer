@@ -75,17 +75,11 @@ h1 { margin-top: 20px; font-size: clamp(38px, 9vw, 60px); font-weight: 600; line
 .stage-widget { position: absolute; right: 16px; top: 16px; width: min(58%, 340px); }
 .stage-cap { padding: 10px 16px; border-top: 1px solid var(--border); }
 
-/* widget + bars */
-.widget { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: var(--glow); }
-.widget-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-.widget-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+/* barras */
 .bar-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; margin-bottom: 6px; }
 .bar-track { position: relative; height: 8px; border-radius: 999px; background: var(--surface); }
-.bar-fill { height: 100%; border-radius: 999px; transition: background .2s; }
-.tone-ok { background: var(--accent); } .tone-warn { background: var(--warn); } .tone-crit { background: var(--crit); }
+.bar-fill { height: 100%; border-radius: 999px; transition: width .6s cubic-bezier(0.22, 1, 0.36, 1), background-color .3s; }
 .bar-mark { position: absolute; top: -4px; width: 2px; height: 16px; border-radius: 2px; background: rgb(230 237 243 / .75); }
-.callout { margin-top: 14px; padding: 8px 12px; font-size: 12px; color: var(--warn); border: 1px solid color-mix(in oklab, var(--warn) 40%, transparent); background: color-mix(in oklab, var(--warn) 10%, transparent); border-radius: 8px; }
 
 /* features */
 .cards-3 { margin-top: 40px; display: grid; gap: 20px; }

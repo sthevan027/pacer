@@ -14,11 +14,7 @@ export const pt = {
     videoCaption: "● Assista ao Pacer em ação (0:21) · com som",
   },
   widget: {
-    session: "Sessão (5h)",
-    weekly: "Semanal",
     resets: "reinicia",
-    warning: "Nesse ritmo, acaba em 1d 7h.",
-    caption: "Exemplo com dados fictícios",
   },
   how: {
     title: "Como funciona",
@@ -34,7 +30,7 @@ export const pt = {
   },
   accent: {
     title: "Sua cor",
-    text: "Troque o destaque — a página inteira segue. Aviso (laranja) e crítico (vermelho) continuam fixos, para o alerta nunca se perder.",
+    text: "Troque o destaque — a página inteira segue. De 70% a 90% a barra vai do laranja ao vermelho, e a partir de 90% fica vermelha. Isso não muda com a cor, para o alerta nunca se perder.",
     normal: "Normal",
     warn: "Aviso",
     crit: "Crítico",
