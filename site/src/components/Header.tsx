@@ -1,8 +1,8 @@
 import { pt } from "../content/pt";
 import { Logo } from "./Logo";
-import { LATEST_URL, REPO_URL } from "../lib/release";
+import { installerUrl, REPO_URL, type ReleaseInfo } from "../lib/release";
 
-export function Header() {
+export function Header({ release }: { release?: ReleaseInfo }) {
   const t = pt.nav;
   return (
     <header className="header">
@@ -16,7 +16,7 @@ export function Header() {
           <a href="#privacidade">{t.about}</a>
           <a href={REPO_URL} rel="noopener">{t.github}</a>
         </nav>
-        <a className="pill-btn" href={LATEST_URL} rel="noopener">{t.download}</a>
+        <a className="pill-btn" href={installerUrl(release)} rel="noopener">{t.download}</a>
       </div>
     </header>
   );

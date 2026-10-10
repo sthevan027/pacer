@@ -1,8 +1,17 @@
 export const REPO = "sthevan027/pacer";
 export const REPO_URL = `https://github.com/${REPO}`;
 export const RELEASES_URL = `${REPO_URL}/releases`;
-/** Fallback do botão: funciona sem JS e com a API fora do ar. */
-export const LATEST_URL = `${RELEASES_URL}/latest`;
+/**
+ * Instalador usado só enquanto a API de releases não respondeu (ou falhou): o clique já baixa um
+ * instalador funcional em vez de abrir a página da release. Com a API no ar, vale sempre o mais recente.
+ * Atualize junto com uma release, se quiser que o fallback acompanhe.
+ */
+export const FALLBACK_INSTALLER_URL = `${RELEASES_URL}/download/v2.1.0/Pacer_2.1.0_x64-setup.exe`;
+
+/** Link de download direto: o instalador da última release, ou o fallback. */
+export function installerUrl(release?: ReleaseInfo): string {
+  return release?.installer?.url ?? FALLBACK_INSTALLER_URL;
+}
 
 const API_URL = `https://api.github.com/repos/${REPO}/releases?per_page=4`;
 const CACHE_KEY = "pacer:releases:v1";

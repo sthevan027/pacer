@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fetchReleases, formatSize, parseReleases, pickInstaller } from "./release";
+import { FALLBACK_INSTALLER_URL, fetchReleases, formatSize, installerUrl, parseReleases, pickInstaller } from "./release";
 import { isWindows } from "./platform";
 
 const asset = (name: string) => ({ name, size: 2_411_724, browser_download_url: `https://x/${name}` });
@@ -41,6 +41,14 @@ describe("release", () => {
     expect((await fetchReleases(ok, storage))[0].version).toBe("v2.1.0");
     await fetchReleases(ok, storage);
     expect(calls).toBe(1);
+  });
+
+  it("baixa direto o instalador da última release, ou o fallback — nunca a página da release", () => {
+    const [latest] = parseReleases([rel("v2.2.0")]);
+    expect(installerUrl(latest)).toBe("https://x/Pacer_2.2.0_x64-setup.exe");
+    expect(installerUrl(undefined)).toBe(FALLBACK_INSTALLER_URL);
+    expect(installerUrl(parseReleases([rel("v2.3.0", { assets: [] })])[0])).toBe(FALLBACK_INSTALLER_URL);
+    expect(FALLBACK_INSTALLER_URL).toMatch(/\/releases\/download\/.+_x64-setup\.exe$/);
   });
 
   it("formata tamanho em MB pt-BR", () => {
