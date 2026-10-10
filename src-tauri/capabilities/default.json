@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissões da janela principal e da janelinha de hover do Pacer",
-  "windows": ["main", "hover"],
+  "description": "Permissões do widget, da janelinha de hover e do painel de uso",
+  "windows": ["main", "hover", "panel"],
   "permissions": [
     "core:default",
     "opener:default",

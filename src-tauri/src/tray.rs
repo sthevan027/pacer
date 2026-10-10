@@ -11,8 +11,8 @@ use tauri::webview::WebviewWindowBuilder;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow};
 
 /// Mesmos argumentos do WebView2 da janela `main` (ver `tauri.conf.json`): sem GPU, memória
-/// mais baixa parada em segundo plano.
-const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-gpu";
+/// mais baixa parada em segundo plano. O painel (`crate::panel`) usa os mesmos.
+pub const BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-gpu";
 
 /// Janelinha visual que aparece ao passar o mouse na bandeja (Sessão + Semanal).
 const HOVER_W: i32 = 280;
@@ -183,11 +183,12 @@ fn hide_hover_later(app: &AppHandle) {
 }
 
 pub fn create(app: &AppHandle, accent_hex: &str) -> tauri::Result<()> {
+    let panel = MenuItem::with_id(app, "panel", "Abrir painel de uso", true, None::<&str>)?;
     let refresh = MenuItem::with_id(app, "refresh", "Atualizar agora", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Configurações", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&refresh, &settings, &sep, &quit])?;
+    let menu = Menu::with_items(app, &[&panel, &refresh, &settings, &sep, &quit])?;
     let accent = parse_hex_rgb(accent_hex).unwrap_or(DEFAULT_ACCENT);
 
     TrayIconBuilder::with_id("main")
@@ -196,6 +197,7 @@ pub fn create(app: &AppHandle, accent_hex: &str) -> tauri::Result<()> {
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
+            "panel" => crate::panel::open(app),
             "refresh" => app.state::<std::sync::Arc<crate::state::Shared>>().request_refresh(),
             "settings" => {
                 show_main(app);

@@ -5,12 +5,14 @@ pub mod logs;
 use crate::pacing;
 use crate::providers::{FetchResult, Provider};
 use crate::snapshot::{Notice, Snapshot, UsageWindow};
+use crate::usage::{Activity, UsageStore};
 use api::{ApiError, ApiWindow};
 use async_trait::async_trait;
 use chrono::{DateTime, Local, Utc};
 use creds::CredsError;
-use logs::{Activity, LogScanner};
+use logs::LogScanner;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 /// Versão do Claude Code usada no User-Agent (o endpoint exige esse formato).
 pub const CLAUDE_CLI_VERSION: &str = "2.1.288";
@@ -32,6 +34,9 @@ pub struct ClaudeProvider {
     usage_url: String,
     http: reqwest::Client,
     scanner: LogScanner,
+    /// O mesmo store que o comando do painel lê. Antes o scanner morava só aqui dentro, e o
+    /// painel não teria como alcançá-lo.
+    usage: Arc<Mutex<UsageStore>>,
     activity: Activity,
     plan: Option<String>,
     api_windows: Vec<ApiWindow>,
@@ -42,16 +47,17 @@ pub struct ClaudeProvider {
 }
 
 impl ClaudeProvider {
-    pub fn new(claude_dir: PathBuf) -> Self {
-        Self::with_url(claude_dir, api::USAGE_URL.into())
+    pub fn new(claude_dir: PathBuf, usage: Arc<Mutex<UsageStore>>) -> Self {
+        Self::with_url(claude_dir, api::USAGE_URL.into(), usage)
     }
 
-    pub fn with_url(claude_dir: PathBuf, usage_url: String) -> Self {
+    pub fn with_url(claude_dir: PathBuf, usage_url: String, usage: Arc<Mutex<UsageStore>>) -> Self {
         Self {
             claude_dir,
             usage_url,
             http: reqwest::Client::new(),
             scanner: LogScanner::new(),
+            usage,
             activity: Activity { days: Vec::new(), today_tokens: 0 },
             plan: None,
             api_windows: Vec::new(),
@@ -75,7 +81,11 @@ impl Provider for ClaudeProvider {
     }
 
     fn tick_local(&mut self, now: DateTime<Utc>) {
-        self.activity = self.scanner.scan(&self.claude_dir.join("projects"), now.with_timezone(&Local));
+        let events = self.scanner.scan(&self.claude_dir.join("projects"), now.with_timezone(&Local));
+        let mut store = self.usage.lock().unwrap();
+        store.set_provider(logs::PROVIDER_ID, events);
+        self.activity = store.activity(now.with_timezone(&Local));
+        drop(store);
         self.windows = to_windows(&self.api_windows, now);
     }
 
@@ -149,6 +159,10 @@ mod tests {
 
     const MINIMAL: &str = include_str!("../../../tests/fixtures/usage_minimal.json");
 
+    fn test_provider(dir: &std::path::Path, usage_url: String) -> ClaudeProvider {
+        ClaudeProvider::with_url(dir.into(), usage_url, Arc::new(Mutex::new(UsageStore::new())))
+    }
+
     fn write_creds(dir: &std::path::Path, expires_in_hours: i64) {
         let exp = (Utc::now() + chrono::Duration::hours(expires_in_hours)).timestamp_millis();
         fs::write(
@@ -167,7 +181,7 @@ mod tests {
     #[tokio::test]
     async fn without_credentials_shows_notice_and_skips() {
         let d = tempfile::tempdir().unwrap();
-        let mut p = ClaudeProvider::with_url(d.path().into(), "http://127.0.0.1:9/usage".into());
+        let mut p = test_provider(d.path(), "http://127.0.0.1:9/usage".into());
         assert_eq!(p.fetch_remote(Utc::now()).await, FetchResult::Skipped);
         let s = p.snapshot();
         assert_eq!(s.notice, Some(Notice::NoCredentials));
@@ -180,7 +194,7 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         write_creds(d.path(), 2);
         let server = server_with(200).await;
-        let mut p = ClaudeProvider::with_url(d.path().into(), format!("{}/usage", server.url()));
+        let mut p = test_provider(d.path(), format!("{}/usage", server.url()));
         let now = Utc::now();
         assert_eq!(p.fetch_remote(now).await, FetchResult::Ok);
         let s = p.snapshot();
@@ -197,7 +211,7 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         write_creds(d.path(), 2);
         let ok = server_with(200).await;
-        let mut p = ClaudeProvider::with_url(d.path().into(), format!("{}/usage", ok.url()));
+        let mut p = test_provider(d.path(), format!("{}/usage", ok.url()));
         p.fetch_remote(Utc::now()).await;
         let limited = server_with(429).await;
         p.usage_url = format!("{}/usage", limited.url());
@@ -213,7 +227,7 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         write_creds(d.path(), 2);
         let ok = server_with(200).await;
-        let mut p = ClaudeProvider::with_url(d.path().into(), format!("{}/usage", ok.url()));
+        let mut p = test_provider(d.path(), format!("{}/usage", ok.url()));
         p.fetch_remote(Utc::now()).await;
         fs::write(d.path().join(".credentials.json"), r#"{"claudeAiOauth":{"acc"#).unwrap();
         assert_eq!(p.fetch_remote(Utc::now()).await, FetchResult::Failed);
@@ -229,27 +243,40 @@ mod tests {
         write_creds(d.path(), -1);
         let mut server = mockito::Server::new_async().await;
         let never = server.mock("GET", "/usage").expect(0).create_async().await;
-        let mut p = ClaudeProvider::with_url(d.path().into(), format!("{}/usage", server.url()));
+        let mut p = test_provider(d.path(), format!("{}/usage", server.url()));
         assert_eq!(p.fetch_remote(Utc::now()).await, FetchResult::Skipped);
         never.assert_async().await;
         assert_eq!(p.snapshot().notice, Some(Notice::TokenExpired));
     }
 
     #[tokio::test]
-    async fn tick_local_reads_logs() {
+    async fn tick_local_reads_logs_and_feeds_the_shared_store() {
         let d = tempfile::tempdir().unwrap();
         let proj = d.path().join("projects").join("x");
         fs::create_dir_all(&proj).unwrap();
         let ts = Utc::now().to_rfc3339();
         fs::write(
             proj.join("s.jsonl"),
-            format!(r#"{{"type":"assistant","timestamp":"{ts}","requestId":"r","message":{{"id":"m","usage":{{"input_tokens":42}}}}}}"#),
+            format!(
+                r#"{{"type":"assistant","timestamp":"{ts}","sessionId":"sess","cwd":"D:\\Projetos\\pacer","requestId":"r","message":{{"id":"m","model":"claude-opus-5-5","usage":{{"input_tokens":42}}}}}}"#
+            ),
         )
         .unwrap();
-        let mut p = ClaudeProvider::with_url(d.path().into(), "http://127.0.0.1:9/usage".into());
+
+        // o mesmo store que o painel vai ler pelo comando
+        let usage = Arc::new(Mutex::new(UsageStore::new()));
+        let mut p = ClaudeProvider::with_url(d.path().into(), "http://127.0.0.1:9/usage".into(), usage.clone());
         p.tick_local(Utc::now());
+
         let s = p.snapshot();
         assert_eq!(s.activity.len(), 30);
         assert_eq!(s.today_tokens, 42);
+
+        // e o painel enxerga o mesmo evento, com os campos ricos
+        let store = usage.lock().unwrap();
+        let report = store.report(&crate::usage::ReportFilter::default(), Local::now(), 5.0);
+        assert_eq!(report.totals.input, 42);
+        assert_eq!(report.by_model[0].model, "claude-opus-5-5");
+        assert_eq!(report.top_projects[0].name, "pacer");
     }
 }

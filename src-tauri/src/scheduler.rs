@@ -77,7 +77,7 @@ pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
     tauri::async_runtime::spawn(async move {
         let mut refresh = shared.config.lock().unwrap().refresh_minutes;
         let mut slots = vec![Slot {
-            provider: Box::new(ClaudeProvider::new(creds::claude_dir())),
+            provider: Box::new(ClaudeProvider::new(creds::claude_dir(), shared.usage.clone())),
             backoff: Backoff::new(refresh),
             next_remote: Utc::now(),
             last_remote: None,
