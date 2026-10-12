@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { pt } from "../content/pt";
-import { formatSize, LATEST_URL, REPO_URL, type ReleaseInfo } from "../lib/release";
+import { formatSize, installerUrl, REPO_URL, type ReleaseInfo } from "../lib/release";
 import { isWindows } from "../lib/platform";
 
 function DownloadButton({ release }: { release?: ReleaseInfo }) {
@@ -14,10 +14,9 @@ function DownloadButton({ release }: { release?: ReleaseInfo }) {
       </div>
     );
   }
-  const installer = release?.installer;
   const meta = release?.version;
   return (
-    <a className="cta" href={installer?.url ?? LATEST_URL} rel="noopener">
+    <a className="cta" href={installerUrl(release)} rel="noopener">
       <span aria-hidden="true">▦</span> {t.cta}
       {meta && <span className="cta-meta mono">{meta}</span>}
     </a>

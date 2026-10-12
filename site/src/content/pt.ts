@@ -14,11 +14,7 @@ export const pt = {
     videoCaption: "● Assista ao Pacer em ação (0:21) · com som",
   },
   widget: {
-    session: "Sessão (5h)",
-    weekly: "Semanal",
     resets: "reinicia",
-    warning: "Nesse ritmo, acaba em 1d 7h.",
-    caption: "Exemplo com dados fictícios",
   },
   how: {
     title: "Como funciona",
@@ -34,7 +30,7 @@ export const pt = {
   },
   accent: {
     title: "Sua cor",
-    text: "Troque o destaque — a página inteira segue. Aviso (laranja) e crítico (vermelho) continuam fixos, para o alerta nunca se perder.",
+    text: "Troque o destaque — a página inteira segue. De 70% a 90% a barra vai do laranja ao vermelho, e a partir de 90% fica vermelha. Isso não muda com a cor, para o alerta nunca se perder.",
     normal: "Normal",
     warn: "Aviso",
     crit: "Crítico",
@@ -72,11 +68,41 @@ export const pt = {
     title: "Novidades",
     subtitle: "As últimas releases, direto do GitHub.",
     all: "Ver todas as releases →",
+    expand: "ver o que mudou",
+    fullNotes: "Notas completas no GitHub →",
+    empty: "Sem resumo para esta versão.",
     // usado só se a API do GitHub falhar
     fallback: [
-      { version: "v2.1.0", title: "hover na bandeja e cor de destaque", date: "2026-10-09T12:00:00Z" },
-      { version: "v2.0.1", title: "Pacer 2.0.1", date: "2026-10-04T12:00:00Z" },
-      { version: "v2.0.0", title: "Pacer 2.0.0", date: "2026-10-03T12:00:00Z" },
+      {
+        version: "v2.1.0",
+        title: "Pacer 2.1.0: hover na bandeja e cor de destaque",
+        date: "2026-10-09T12:00:00Z",
+        highlights: [
+          "**Popup visual ao passar o mouse na bandeja** — Sessão (5h) e Semanal aparecem num popup perto do ícone, sem precisar abrir o painel",
+          "**Cor de destaque configurável** — nova seção Aparência nas Configurações, 5 presets (Azul, Roxo, Verde, Rosa, Ciano), vale pro painel, pro popup e pro ícone da bandeja. Aviso (laranja) e crítico (vermelho) continuam fixos",
+        ],
+      },
+      {
+        version: "v2.0.1",
+        title: "Pacer 2.0.1",
+        date: "2026-10-04T12:00:00Z",
+        highlights: [
+          "**Um clique no ícone da bandeja já traz o widget pra frente.** Antes precisava de dois cliques.",
+          "**Menos memória:** de ~254 MB para ~186 MB. O WebView2 agora roda em modo de memória baixa e sem GPU, com o mesmo visual.",
+        ],
+      },
+      {
+        version: "v2.0.0",
+        title: "Pacer 2.0.0",
+        date: "2026-10-03T12:00:00Z",
+        highlights: [
+          "**Previsão do ritmo:** a marca branca na barra mostra onde você vai estar na redefinição; se for estourar, aparece \"Nesse ritmo, acaba em X\".",
+          "**Sessão (5h), semanal e por modelo** com a % real da Anthropic.",
+          "**Atividade dos últimos 30 dias** em grade estilo GitHub.",
+          "**Cores pelo uso:** azul até 70%, laranja→vermelho de 70 a 90%, vermelho a partir de 90%.",
+          "**Alertas** do Windows por limiar e quando a previsão estoura antes da redefinição.",
+        ],
+      },
     ],
   },
   footer: {
