@@ -34,10 +34,10 @@ export const PROVIDERS: readonly ProviderDef[] = [
     connectedText: "Lendo os dados locais do Codex",
     missingText: "Sem dados do Codex neste PC",
     noDataNote:
-      "Não achei dados do Codex neste PC. Use o Codex neste computador e o Pacer lê sozinho os limites da última sessão.",
+      "Não achei dados do Codex neste PC. Instale o Codex (ou a extensão do VS Code), entre na sua conta e o Pacer lê os limites sozinho.",
     tokenExpiredText: "Não consegui ler os dados do Codex.",
     offlineText: "Não consegui ler os dados do Codex.",
-    sourceNote: "Mostra só o uso do Codex feito neste PC, na última sessão.",
+    sourceNote: "Lido do Codex instalado neste PC; sem o Codex aberto, vale a última sessão.",
   },
   {
     id: "copilot",

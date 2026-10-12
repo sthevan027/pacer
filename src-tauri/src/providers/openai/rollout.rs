@@ -37,7 +37,7 @@ pub fn codex_dir() -> PathBuf {
 const MAX_FILES: usize = 5;
 /// Só o fim do arquivo interessa: o `token_count` mais novo é um dos últimos eventos.
 const TAIL_BYTES: u64 = 512 * 1024;
-const MAX_WINDOW_MINUTES: i64 = 365 * 24 * 60;
+pub(super) const MAX_WINDOW_MINUTES: i64 = 365 * 24 * 60;
 
 fn collect_rollouts(dir: &Path, out: &mut Vec<(SystemTime, PathBuf)>) {
     let Ok(entries) = fs::read_dir(dir) else { return };

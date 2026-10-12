@@ -1,3 +1,4 @@
+pub mod app_server;
 pub mod rollout;
 
 use crate::pacing;
@@ -5,8 +6,10 @@ use crate::providers::{FetchResult, Provider};
 use crate::snapshot::{Notice, Snapshot, UsageWindow};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
+use app_server::Outcome;
 use rollout::{LimitWindow, RateLimits};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 pub const PROVIDER_ID: &str = "openai";
 
@@ -39,8 +42,12 @@ fn to_window(w: &LimitWindow, now: DateTime<Utc>) -> UsageWindow {
     UsageWindow { id, label, used_pct, resets_at, pace }
 }
 
+/// Leitura ao vivo dos limites (o `codex app-server`); injetável para os testes não abrirem processo.
+pub type LiveSource = Arc<dyn Fn(DateTime<Utc>) -> Outcome + Send + Sync>;
+
 pub struct OpenAiProvider {
     codex_dir: PathBuf,
+    live: LiveSource,
     limits: Option<RateLimits>,
     windows: Vec<UsageWindow>,
     notice: Option<Notice>,
@@ -48,7 +55,11 @@ pub struct OpenAiProvider {
 
 impl OpenAiProvider {
     pub fn new(codex_dir: PathBuf) -> Self {
-        Self { codex_dir, limits: None, windows: Vec::new(), notice: None }
+        Self::with_live(codex_dir, Arc::new(app_server::read_limits))
+    }
+
+    pub fn with_live(codex_dir: PathBuf, live: LiveSource) -> Self {
+        Self { codex_dir, live, limits: None, windows: Vec::new(), notice: None }
     }
 
     fn recompute(&mut self, now: DateTime<Utc>) {
@@ -66,9 +77,16 @@ impl Provider for OpenAiProvider {
         self.recompute(now);
     }
 
-    /// Não há API: "remoto" aqui é reler os rollouts do Codex, no ritmo do `refreshMinutes`.
+    /// Pergunta ao próprio Codex (`app-server`); se ele não está instalado, não tem login ou não
+    /// responde, cai nos rollouts em disco (o último evento de uso). No ritmo do `refreshMinutes`.
     async fn fetch_remote(&mut self, now: DateTime<Utc>) -> FetchResult {
-        match rollout::latest(&self.codex_dir) {
+        let live = self.live.clone();
+        let outcome = tauri::async_runtime::spawn_blocking(move || live(now)).await.unwrap_or(Outcome::Unavailable);
+        let limits = match outcome {
+            Outcome::Limits(l) => Some(l),
+            Outcome::NotSignedIn | Outcome::Unavailable => rollout::latest(&self.codex_dir),
+        };
+        match limits {
             Some(l) => {
                 self.limits = Some(l);
                 self.notice = None;
@@ -109,6 +127,11 @@ mod tests {
 
     const FIXTURE: &str = include_str!("../../../tests/fixtures/codex_rollout.jsonl");
 
+    /// Provedor de teste: sem o `codex` ao vivo (nunca abre processo), só os rollouts da pasta.
+    fn local(dir: &std::path::Path) -> OpenAiProvider {
+        OpenAiProvider::with_live(dir.into(), Arc::new(|_| Outcome::Unavailable))
+    }
+
     fn with_rollout(body: &str) -> tempfile::TempDir {
         let d = tempfile::tempdir().unwrap();
         let day = d.path().join("sessions").join("2026").join("10").join("12");
@@ -125,7 +148,7 @@ mod tests {
     #[tokio::test]
     async fn without_codex_data_shows_notice_and_skips() {
         let d = tempfile::tempdir().unwrap();
-        let mut p = OpenAiProvider::new(d.path().into());
+        let mut p = local(d.path());
         assert_eq!(p.fetch_remote(before_reset()).await, FetchResult::Skipped);
         let s = p.snapshot();
         assert_eq!(s.notice, Some(Notice::NoCredentials));
@@ -137,7 +160,7 @@ mod tests {
     #[tokio::test]
     async fn reads_windows_plan_and_event_time() {
         let d = with_rollout(FIXTURE);
-        let mut p = OpenAiProvider::new(d.path().into());
+        let mut p = local(d.path());
         assert_eq!(p.fetch_remote(before_reset()).await, FetchResult::Ok);
         let s = p.snapshot();
         assert_eq!(s.plan.as_deref(), Some("Plus"));
@@ -152,7 +175,7 @@ mod tests {
     #[tokio::test]
     async fn a_window_past_its_reset_counts_as_zero() {
         let d = with_rollout(FIXTURE);
-        let mut p = OpenAiProvider::new(d.path().into());
+        let mut p = local(d.path());
         // depois do reset da janela de 5h, antes do reset da semanal
         p.fetch_remote(Utc.timestamp_opt(1_790_020_000, 0).unwrap()).await;
         let s = p.snapshot();
@@ -164,7 +187,7 @@ mod tests {
     #[tokio::test]
     async fn tick_local_expires_windows_without_rereading_files() {
         let d = with_rollout(FIXTURE);
-        let mut p = OpenAiProvider::new(d.path().into());
+        let mut p = local(d.path());
         p.fetch_remote(before_reset()).await;
         assert_eq!(p.snapshot().windows[0].used_pct, 42.5);
         fs::remove_dir_all(d.path().join("sessions")).unwrap();
@@ -175,13 +198,51 @@ mod tests {
     #[tokio::test]
     async fn data_disappearing_clears_the_card() {
         let d = with_rollout(FIXTURE);
-        let mut p = OpenAiProvider::new(d.path().into());
+        let mut p = local(d.path());
         p.fetch_remote(before_reset()).await;
         fs::remove_dir_all(d.path().join("sessions")).unwrap();
         assert_eq!(p.fetch_remote(before_reset()).await, FetchResult::Skipped);
         let s = p.snapshot();
         assert!(s.windows.is_empty());
         assert_eq!(s.notice, Some(Notice::NoCredentials));
+    }
+
+    fn live_limits(used: f64) -> Outcome {
+        Outcome::Limits(RateLimits {
+            plan: Some("pro".into()),
+            windows: vec![LimitWindow { used_pct: used, minutes: 300, resets_at: Some(Utc.timestamp_opt(1_790_030_000, 0).unwrap()) }],
+            at: Utc.timestamp_opt(1_790_009_000, 0).unwrap(),
+        })
+    }
+
+    #[tokio::test]
+    async fn live_codex_answer_wins_over_the_rollouts() {
+        let d = with_rollout(FIXTURE);
+        let mut p = OpenAiProvider::with_live(d.path().into(), Arc::new(|_| live_limits(7.0)));
+        assert_eq!(p.fetch_remote(before_reset()).await, FetchResult::Ok);
+        let s = p.snapshot();
+        assert_eq!(s.plan.as_deref(), Some("Pro"));
+        assert_eq!((s.windows.len(), s.windows[0].used_pct), (1, 7.0));
+        assert_eq!(s.fetched_at, Some(before_reset()), "hora da leitura ao vivo, não a de um evento antigo");
+    }
+
+    #[tokio::test]
+    async fn not_signed_in_or_missing_codex_falls_back_to_the_rollouts() {
+        for outcome in [Outcome::NotSignedIn, Outcome::Unavailable] {
+            let d = with_rollout(FIXTURE);
+            let o = outcome.clone();
+            let mut p = OpenAiProvider::with_live(d.path().into(), Arc::new(move |_| o.clone()));
+            assert_eq!(p.fetch_remote(before_reset()).await, FetchResult::Ok, "{outcome:?}");
+            assert_eq!(p.snapshot().windows[0].used_pct, 42.5);
+        }
+    }
+
+    #[tokio::test]
+    async fn no_live_answer_and_no_rollouts_shows_the_notice() {
+        let d = tempfile::tempdir().unwrap();
+        let mut p = OpenAiProvider::with_live(d.path().into(), Arc::new(|_| Outcome::NotSignedIn));
+        assert_eq!(p.fetch_remote(before_reset()).await, FetchResult::Skipped);
+        assert_eq!(p.snapshot().notice, Some(Notice::NoCredentials));
     }
 
     #[test]
