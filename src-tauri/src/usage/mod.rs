@@ -447,8 +447,10 @@ impl UsageStore {
 pub fn report_csv(report: &UsageReport) -> String {
     let mut out = String::from("data,modelo,tier,sessao,projeto,entrada,saida,cache_lido,cache_escrito\n");
     for r in &report.recent {
-        // projetos e sessões vêm do disco do usuário e podem ter vírgula/aspas
+        // projetos e sessões vêm do disco do usuário e podem ter vírgula/aspas, ou começar com um
+        // caractere que planilha executa como fórmula (`=`, `+`, `-`, `@`): vira texto com apóstrofo
         let esc = |s: &str| {
+            let s = &if s.starts_with(['=', '+', '-', '@', '\t', '\r']) { format!("'{s}") } else { s.to_string() };
             if s.contains([',', '"', '\n']) {
                 format!("\"{}\"", s.replace('"', "\"\""))
             } else {
@@ -692,6 +694,23 @@ mod tests {
         let csv = report_csv(&r);
         assert!(csv.starts_with("data,modelo,tier,sessao,projeto,entrada,saida,cache_lido,cache_escrito\n"));
         assert!(csv.contains("\"obra, fase 2\""));
+    }
+
+    #[test]
+    fn csv_neutralizes_cells_that_a_spreadsheet_would_run_as_formulas() {
+        let s = store(vec![
+            ev(at(2026, 10, 10, 9), "claude-sonnet-5", "s1", "=HYPERLINK(\"http://x\")", 1, 2),
+            ev(at(2026, 10, 10, 10), "claude-sonnet-5", "s2", "@SUM(A1)", 1, 2),
+            ev(at(2026, 10, 10, 11), "claude-sonnet-5", "s3", "-2+3", 1, 2),
+            ev(at(2026, 10, 10, 12), "claude-sonnet-5", "s4", "pacer", 1, 2),
+        ]);
+        let csv = report_csv(&s.report(&ReportFilter::default(), now(), 5.0));
+        // texto literal: apóstrofo na frente, e as aspas do campo continuam valendo
+        assert!(csv.contains(",\"'=HYPERLINK(\"\"http://x\"\")\","), "{csv}");
+        assert!(csv.contains(",'@SUM(A1),"));
+        assert!(csv.contains(",'-2+3,"));
+        // nome normal não muda
+        assert!(csv.contains(",pacer,"));
     }
 
     #[test]
