@@ -45,12 +45,28 @@ continua leve.
   isso — é uma referência, não uma fatura. Modelo fora da tabela fica **sem**
   valor, e o painel avisa, em vez de chutar um número
 
-![Painel de uso](docs/screenshots/pacer-panel.png)
+![Painel de uso](docs/screenshots/pacer-panel-2.png)
 ![Detalhe do dia no gráfico](docs/screenshots/pacer-panel-tooltip.png)
 
 > O valor por modelo e por requisição é uma **estimativa a preço de API**
 > (tabela de preços lida em 10/10/2026). A cotação do dólar é editável em
 > Configurações → Valor estimado.
+
+## Atualizações
+
+O Pacer checa sozinho, ao abrir, se existe uma versão nova publicada no GitHub.
+Em **Configurações → Atualizações** aparecem a versão atual e a hora da última
+verificação. **Verificar agora** checa na hora; quando há versão nova, o botão
+vira **Atualizar agora**, que baixa, instala e reinicia o app.
+
+- A checagem automática é silenciosa: se falhar (sem internet, por exemplo), nada
+  aparece. Só a verificação manual mostra o erro.
+- Só instala atualizações assinadas com a chave privada do projeto. A chave
+  pública fica em `src-tauri/tauri.conf.json`.
+- Para publicar uma versão com atualização, veja "Publicar uma versão" em
+  "Rodar do código".
+
+![Atualizações](docs/screenshots/pacer-atualizacoes.png)
 
 ## Requisitos
 
