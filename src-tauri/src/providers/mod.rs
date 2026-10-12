@@ -1,4 +1,5 @@
 pub mod claude;
+pub mod openai;
 
 use crate::snapshot::Snapshot;
 use async_trait::async_trait;

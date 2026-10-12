@@ -1,6 +1,7 @@
 use crate::alerts::{self, AlertState};
 use crate::config::Config;
 use crate::providers::claude::{creds, ClaudeProvider};
+use crate::providers::openai::{rollout, OpenAiProvider};
 use crate::providers::{FetchResult, Provider};
 use crate::snapshot::Snapshot;
 use crate::state::Shared;
@@ -112,12 +113,16 @@ async fn poll_all(slots: &mut [Slot], cfg: &Config, forced: bool, now: DateTime<
 pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
     tauri::async_runtime::spawn(async move {
         let mut refresh = shared.config.lock().unwrap().refresh_minutes;
-        let mut slots = vec![Slot {
-            provider: Box::new(ClaudeProvider::new(creds::claude_dir(), shared.usage.clone())),
+        let new_slot = |provider: Box<dyn Provider>| Slot {
+            provider,
             backoff: Backoff::new(refresh),
             next_remote: Utc::now(),
             last_remote: None,
-        }];
+        };
+        let mut slots = vec![
+            new_slot(Box::new(ClaudeProvider::new(creds::claude_dir(), shared.usage.clone()))),
+            new_slot(Box::new(OpenAiProvider::new(rollout::codex_dir()))),
+        ];
         let mut alert_state = AlertState::default();
 
         loop {
