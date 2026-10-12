@@ -148,6 +148,7 @@ svg.i { stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: ro
 .toast svg { color: var(--warn); margin-top: 1px; }
 .prov { display: flex; align-items: center; gap: 10px; padding: 9px 0; }
 .plogo { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; background: rgba(217, 119, 87, 0.14); }
+.plogo.neutral { background: rgba(139, 148, 158, 0.16); color: var(--dim); }
 .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; margin-right: 5px; vertical-align: 1px; animation: pl 2s infinite; }
 @keyframes pl {
   0% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.55); }
