@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { ClaudeLogo, Icon } from "../../icons/icons";
 import type { AppState, Config } from "../../lib/types";
+import type { UseUpdateStatus } from "../../lib/useUpdateStatus";
 import { Header } from "../Header";
 import { AccentPicker } from "./AccentPicker";
 import { RateInput } from "./RateInput";
@@ -9,11 +10,20 @@ import { Row } from "./Row";
 import { Segmented } from "./Segmented";
 import { ThresholdBar } from "./ThresholdBar";
 import { Toggle } from "./Toggle";
+import { UpdateRow } from "./UpdateRow";
 
 const REPO_URL = "https://github.com/sthevan027/pacer";
 const REFRESH_OPTIONS = [1, 5, 10] as const;
 
-export function SettingsView({ state, onBack }: { state: AppState; onBack: () => void }) {
+export function SettingsView({
+  state,
+  onBack,
+  update,
+}: {
+  state: AppState;
+  onBack: () => void;
+  update: UseUpdateStatus;
+}) {
   const cfg = state.config;
   const save = (patch: Partial<Config>) => invoke<Config>("save_config", { config: { ...cfg, ...patch } });
   const claude = state.snapshots.find((s) => s.provider === "claude");
@@ -108,6 +118,14 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
           <Icon name="plus" size={13} />
           Adicionar provedor <span className="dim">(em breve)</span>
         </div>
+      </section>
+
+      <section className="sec">
+        <div className="sh">
+          <Icon name="download" />
+          Atualizações
+        </div>
+        <UpdateRow update={update} />
       </section>
 
       <div className="foot">

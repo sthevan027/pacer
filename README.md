@@ -80,6 +80,26 @@ bun run tauri build   # instalador em src-tauri/target/release/bundle/nsis/
 
 Testes: `cargo test --manifest-path src-tauri/Cargo.toml` e `bun run test`.
 
+### Publicar uma versão (com atualização automática)
+
+O app checa sozinho, ao abrir, se existe versão nova no GitHub Releases (aba
+Configurações → Atualizações). Para isso cada release precisa de um `latest.json`
+assinado com a chave do updater, que **fica fora do repo**.
+
+- A chave privada mora em `~/.tauri/pacer-updater.key` (gerada uma vez com
+  `bun run tauri signer generate -w ~/.tauri/pacer-updater.key`). Nunca commitar.
+  A parte pública já está em `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`.
+- Antes do build de release, exportar `TAURI_SIGNING_PRIVATE_KEY` (conteúdo do arquivo
+  da chave) e `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+- `bun run tauri build` gera o instalador e o `.sig` dele em `src-tauri/target/release/bundle/nsis/`.
+  Depois rode `bun run tools/make-latest-json.ts <versão> "<notas>"`: ele gera o
+  `latest.json` ao lado do instalador (o Tauri v2 não gera esse arquivo).
+- A release no GitHub precisa ter a tag `v<versão>` e subir o instalador, o `.sig`
+  e o `latest.json`.
+
+Limitação: a primeira versão com o updater não consegue se atualizar sozinha. A
+atualização real só é testável a partir da versão seguinte.
+
 ## Privacidade
 
 - O Pacer **lê** `~/.claude/.credentials.json` (o login do Claude Code) e

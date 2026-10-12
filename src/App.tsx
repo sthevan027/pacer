@@ -6,6 +6,7 @@ import { MainView } from "./components/MainView";
 import { SettingsView } from "./components/settings/SettingsView";
 import { TrayHover } from "./components/TrayHover";
 import { useAutoHeight, useNow, usePacer } from "./lib/hooks";
+import { useUpdateStatus } from "./lib/useUpdateStatus";
 
 type View = "main" | "settings";
 
@@ -34,6 +35,8 @@ function MainApp() {
   const state = usePacer();
   const now = useNow();
   const [view, setView] = useState<View>("main");
+  // Checa atualizações uma vez, quando a janela principal carrega (ela já nasce oculta no boot).
+  const update = useUpdateStatus();
   const ref = useRef<HTMLDivElement>(null);
   useAutoHeight(ref);
 
@@ -62,7 +65,7 @@ function MainApp() {
       ) : view === "main" ? (
         <MainView state={state} now={now} onSettings={() => setView("settings")} />
       ) : (
-        <SettingsView state={state} onBack={() => setView("main")} />
+        <SettingsView state={state} onBack={() => setView("main")} update={update} />
       )}
     </div>
   );
