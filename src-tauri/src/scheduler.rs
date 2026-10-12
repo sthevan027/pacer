@@ -1,4 +1,5 @@
 use crate::alerts::{self, AlertState};
+use crate::config::Config;
 use crate::providers::claude::{creds, ClaudeProvider};
 use crate::providers::{FetchResult, Provider};
 use crate::snapshot::Snapshot;
@@ -96,6 +97,18 @@ async fn poll_slot(s: &mut Slot, enabled: bool, forced: bool, now: DateTime<Utc>
     Some(snap)
 }
 
+/// Uma volta completa: consulta a lista inteira e devolve só os snapshots dos provedores ligados.
+async fn poll_all(slots: &mut [Slot], cfg: &Config, forced: bool, now: DateTime<Utc>) -> Vec<Snapshot> {
+    let mut snaps = Vec::new();
+    for s in slots.iter_mut() {
+        let enabled = cfg.provider_enabled(s.provider.id());
+        if let Some(snap) = poll_slot(s, enabled, forced, now).await {
+            snaps.push(snap);
+        }
+    }
+    snaps
+}
+
 pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
     tauri::async_runtime::spawn(async move {
         let mut refresh = shared.config.lock().unwrap().refresh_minutes;
@@ -119,16 +132,11 @@ pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
                 }
             }
 
-            let mut snaps = Vec::new();
-            for s in &mut slots {
-                let enabled = cfg.provider_enabled(s.provider.id());
-                let Some(snap) = poll_slot(s, enabled, forced, now).await else {
-                    continue;
-                };
-                for a in alert_state.evaluate(&snap, &cfg.alerts, now) {
+            let snaps = poll_all(&mut slots, &cfg, forced, now).await;
+            for snap in &snaps {
+                for a in alert_state.evaluate(snap, &cfg.alerts, now) {
                     alerts::notify(&app, &a);
                 }
-                snaps.push(snap);
             }
 
             crate::tray::update(&app, &snaps, &cfg.accent_color);
@@ -221,13 +229,14 @@ mod tests {
     }
 
     struct Fake {
+        id: &'static str,
         calls: Arc<std::sync::Mutex<Calls>>,
     }
 
     #[async_trait::async_trait]
     impl Provider for Fake {
         fn id(&self) -> &'static str {
-            "fake"
+            self.id
         }
         fn tick_local(&mut self, _now: DateTime<Utc>) {
             self.calls.lock().unwrap().ticks += 1;
@@ -252,9 +261,9 @@ mod tests {
         }
     }
 
-    fn fake_slot(calls: &Arc<std::sync::Mutex<Calls>>, next_remote: DateTime<Utc>) -> Slot {
+    fn fake_slot(id: &'static str, calls: &Arc<std::sync::Mutex<Calls>>, next_remote: DateTime<Utc>) -> Slot {
         Slot {
-            provider: Box::new(Fake { calls: calls.clone() }),
+            provider: Box::new(Fake { id, calls: calls.clone() }),
             backoff: Backoff::new(5),
             next_remote,
             last_remote: None,
@@ -264,7 +273,7 @@ mod tests {
     #[tokio::test]
     async fn disabled_provider_is_never_touched() {
         let calls = Arc::new(std::sync::Mutex::new(Calls::default()));
-        let mut s = fake_slot(&calls, t(0));
+        let mut s = fake_slot("claude", &calls, t(0));
         assert!(poll_slot(&mut s, false, true, t(0)).await.is_none());
         let c = calls.lock().unwrap();
         assert_eq!((c.ticks, c.fetches), (0, 0));
@@ -273,7 +282,7 @@ mod tests {
     #[tokio::test]
     async fn enabled_provider_fetches_when_due() {
         let calls = Arc::new(std::sync::Mutex::new(Calls::default()));
-        let mut s = fake_slot(&calls, t(0));
+        let mut s = fake_slot("claude", &calls, t(0));
         assert!(poll_slot(&mut s, true, false, t(0)).await.is_some());
         let c = calls.lock().unwrap();
         assert_eq!((c.ticks, c.fetches), (1, 1));
@@ -282,9 +291,27 @@ mod tests {
     #[tokio::test]
     async fn enabled_provider_only_ticks_locally_when_not_due() {
         let calls = Arc::new(std::sync::Mutex::new(Calls::default()));
-        let mut s = fake_slot(&calls, t(300));
+        let mut s = fake_slot("claude", &calls, t(300));
         assert!(poll_slot(&mut s, true, false, t(100)).await.is_some());
         let c = calls.lock().unwrap();
         assert_eq!((c.ticks, c.fetches), (1, 0));
+    }
+
+    #[tokio::test]
+    async fn poll_all_only_returns_and_touches_enabled_providers() {
+        // Config padrão: claude ligado, openai desligado. Os dois estão na lista do scheduler.
+        let cfg = Config::default();
+        let claude_calls = Arc::new(std::sync::Mutex::new(Calls::default()));
+        let openai_calls = Arc::new(std::sync::Mutex::new(Calls::default()));
+        let mut slots = vec![
+            fake_slot("claude", &claude_calls, t(0)),
+            fake_slot("openai", &openai_calls, t(0)),
+        ];
+        let snaps = poll_all(&mut slots, &cfg, false, t(0)).await;
+        assert_eq!(snaps.len(), 1);
+        assert_eq!(snaps[0].provider, "fake");
+        assert_eq!(claude_calls.lock().unwrap().fetches, 1);
+        let o = openai_calls.lock().unwrap();
+        assert_eq!((o.ticks, o.fetches), (0, 0));
     }
 }
