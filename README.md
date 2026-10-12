@@ -1,6 +1,6 @@
 # Pacer
 
-**Português** · [English](README.en.md)
+**Português** · [English](README.en.md) · [Site](https://pacercontrol.netlify.app/)
 
 Widget para Windows que mostra quanto do seu plano de IA você já usou — e
 **para onde o ritmo atual te leva** antes da redefinição.
@@ -60,8 +60,9 @@ continua leve.
 
 ## Instalação
 
-Baixe o instalador em [Releases](https://github.com/sthevan027/pacer/releases)
-e execute. A partir da 2.0.1 o instalador é **assinado com o certificado Sthevan.Dev**
+Baixe o instalador pelo [site](https://pacercontrol.netlify.app/) ou em
+[Releases](https://github.com/sthevan027/pacer/releases) e execute. A partir da
+2.0.1 o instalador é **assinado com o certificado Sthevan.Dev**
 (autoassinado, não é de uma autoridade comercial). Por isso o Windows ainda pode mostrar
 "Windows protegeu o computador" → **Mais informações → Executar assim mesmo**.
 Para o Windows reconhecer a assinatura, instale uma vez como confiável o
