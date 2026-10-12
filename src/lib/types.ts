@@ -46,7 +46,7 @@ export interface Config {
   /** Cotação US$→R$ para estimar o consumo a preço de API. */
   usdBrl: number;
   alerts: AlertsConfig;
-  providers: { claude: { enabled: boolean }; openai: { enabled: boolean } };
+  providers: { claude: { enabled: boolean }; openai: { enabled: boolean }; copilot: { enabled: boolean } };
 }
 
 export interface AppState {

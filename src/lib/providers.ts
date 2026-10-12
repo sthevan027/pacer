@@ -1,6 +1,6 @@
-import type { Config, Notice, Snapshot } from "./types";
+import type { Config, Notice, Snapshot, UsageWindow } from "./types";
 
-export type ProviderId = "claude" | "openai";
+export type ProviderId = "claude" | "openai" | "copilot";
 
 export interface ProviderDef {
   id: ProviderId;
@@ -39,6 +39,16 @@ export const PROVIDERS: readonly ProviderDef[] = [
     offlineText: "Não consegui ler os dados do Codex.",
     sourceNote: "Mostra só o uso do Codex feito neste PC, na última sessão.",
   },
+  {
+    id: "copilot",
+    name: "GitHub Copilot",
+    connectedText: "Conectado via GitHub CLI",
+    missingText: "Sem login do GitHub CLI",
+    noDataNote:
+      "Não achei o login do GitHub neste PC. Instale o GitHub CLI e rode `gh auth login` — o Pacer pega sozinho. Contas sem Copilot também caem aqui.",
+    tokenExpiredText: "O login do GitHub expirou. Rode `gh auth login` no terminal.",
+    offlineText: "Sem conexão com o GitHub.",
+  },
 ];
 
 export function providerDef(id: string): ProviderDef | undefined {
@@ -67,6 +77,12 @@ export function noticeText(def: ProviderDef | undefined, notice: Exclude<Notice,
 /** Snapshot da aba escolhida; sem escolha (ou se o provedor sumiu) vale o primeiro. */
 export function pickActive(snapshots: Snapshot[], chosen: string | null): Snapshot | undefined {
   return snapshots.find((s) => s.provider === chosen) ?? snapshots[0];
+}
+
+/** Barras do hover da bandeja: sessão (5h) e semanal quando existem; senão as duas primeiras janelas. */
+export function hoverWindows(windows: UsageWindow[]): UsageWindow[] {
+  const known = ["five_hour", "seven_day"].map((id) => windows.find((w) => w.id === id)).filter((w): w is UsageWindow => !!w);
+  return known.length ? known : windows.slice(0, 2);
 }
 
 /** Provedor com a janela mais cheia: a mesma regra do anel da bandeja. Empate fica com o primeiro. */

@@ -1,4 +1,5 @@
 pub mod claude;
+pub mod copilot;
 pub mod openai;
 
 use crate::snapshot::Snapshot;

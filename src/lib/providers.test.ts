@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { PROVIDERS, pickActive, providerStatus, withProviderEnabled, worstSnapshot } from "./providers";
+import { PROVIDERS, hoverWindows, pickActive, providerStatus, withProviderEnabled, worstSnapshot } from "./providers";
 import type { Config, Snapshot } from "./types";
 
 const claude = PROVIDERS.find((p) => p.id === "claude")!;
 const openai = PROVIDERS.find((p) => p.id === "openai")!;
+const copilot = PROVIDERS.find((p) => p.id === "copilot")!;
 
 function snap(provider: string, notice: Snapshot["notice"] = null): Snapshot {
   return {
@@ -13,8 +14,8 @@ function snap(provider: string, notice: Snapshot["notice"] = null): Snapshot {
 }
 
 describe("PROVIDERS", () => {
-  it("lists claude first and openai second", () => {
-    expect(PROVIDERS.map((p) => p.id)).toEqual(["claude", "openai"]);
+  it("lists claude first, then openai and copilot", () => {
+    expect(PROVIDERS.map((p) => p.id)).toEqual(["claude", "openai", "copilot"]);
   });
 });
 
@@ -61,6 +62,30 @@ describe("pickActive", () => {
   });
 });
 
+describe("copilot texts", () => {
+  it("talks about the GitHub login, not about Claude or Codex", () => {
+    expect(copilot.noDataNote).toContain("gh auth login");
+    expect(copilot.noDataNote).not.toMatch(/Claude|Codex/);
+    expect(copilot.tokenExpiredText).toContain("GitHub");
+    expect(copilot.offlineText).toContain("GitHub");
+    expect(copilot.sourceNote).toBeUndefined();
+    expect(providerStatus(copilot, snap("copilot"), true).text).toBe("Conectado via GitHub CLI");
+  });
+});
+
+describe("hoverWindows", () => {
+  const w = (id: string) => ({ id, label: id, usedPct: 10, resetsAt: null, pace: null });
+
+  it("keeps the session and weekly bars when the provider has them", () => {
+    expect(hoverWindows([w("seven_day_opus"), w("seven_day"), w("five_hour")]).map((x) => x.id)).toEqual(["five_hour", "seven_day"]);
+  });
+
+  it("falls back to the first two windows for providers without those ids", () => {
+    expect(hoverWindows([w("chat"), w("completions"), w("premium")]).map((x) => x.id)).toEqual(["chat", "completions"]);
+    expect(hoverWindows([])).toEqual([]);
+  });
+});
+
 describe("worstSnapshot", () => {
   const withUse = (provider: string, pct: number): Snapshot => ({
     ...snap(provider),
@@ -97,11 +122,11 @@ describe("notice texts", () => {
 });
 
 describe("withProviderEnabled", () => {
-  const providers: Config["providers"] = { claude: { enabled: true }, openai: { enabled: false } };
+  const providers: Config["providers"] = { claude: { enabled: true }, openai: { enabled: false }, copilot: { enabled: false } };
 
   it("changes only the chosen provider and keeps the others", () => {
-    expect(withProviderEnabled(providers, "openai", true)).toEqual({ claude: { enabled: true }, openai: { enabled: true } });
-    expect(withProviderEnabled(providers, "claude", false)).toEqual({ claude: { enabled: false }, openai: { enabled: false } });
+    expect(withProviderEnabled(providers, "openai", true)).toEqual({ claude: { enabled: true }, openai: { enabled: true }, copilot: { enabled: false } });
+    expect(withProviderEnabled(providers, "claude", false)).toEqual({ claude: { enabled: false }, openai: { enabled: false }, copilot: { enabled: false } });
   });
 
   it("does not mutate the original", () => {

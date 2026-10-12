@@ -1,0 +1,13 @@
+{
+  "login": "exemplo",
+  "access_type_sku": "free_limited_copilot",
+  "copilot_plan": "individual",
+  "chat_enabled": true,
+  "organization_login_list": [],
+  "quota_snapshots": {
+    "chat": { "percent_remaining": 73.6, "unlimited": false, "has_quota": true, "entitlement": 200, "remaining": 147 },
+    "completions": { "percent_remaining": 99.6, "unlimited": false, "has_quota": true, "entitlement": 2000, "remaining": 1992 },
+    "premium_interactions": { "percent_remaining": 0.0, "unlimited": false, "has_quota": false, "entitlement": 0, "remaining": 0 }
+  },
+  "quota_reset_date_utc": "2026-11-01T00:00:00.000Z"
+}
