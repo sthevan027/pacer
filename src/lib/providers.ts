@@ -1,6 +1,6 @@
 import type { Config, Notice, Snapshot, UsageWindow } from "./types";
 
-export type ProviderId = "claude" | "openai" | "copilot" | "openrouter";
+export type ProviderId = "claude" | "openai" | "copilot" | "openrouter" | "zai";
 
 export interface ProviderDef {
   id: ProviderId;
@@ -58,6 +58,16 @@ export const PROVIDERS: readonly ProviderDef[] = [
       "Não achei a variável `OPENROUTER_API_KEY` neste PC. Defina-a nas variáveis de ambiente do usuário e reabra o Pacer. A chave fica só no seu computador.",
     tokenExpiredText: "O OpenRouter recusou a chave. Confira o valor de OPENROUTER_API_KEY.",
     offlineText: "Sem conexão com o OpenRouter.",
+  },
+  {
+    id: "zai",
+    name: "z.ai GLM",
+    connectedText: "Conectado via token do z.ai",
+    missingText: "Sem token do z.ai",
+    noDataNote:
+      "Não achei um token do z.ai neste PC. Se você usa o GLM pelo Claude Code, o Pacer lê o `ANTHROPIC_AUTH_TOKEN` do `settings.json`; também vale a variável `ZAI_API_KEY`.",
+    tokenExpiredText: "O z.ai recusou o token. Confira o ANTHROPIC_AUTH_TOKEN ou o ZAI_API_KEY.",
+    offlineText: "Sem conexão com o z.ai.",
   },
 ];
 

@@ -2,6 +2,7 @@ pub mod claude;
 pub mod copilot;
 pub mod openai;
 pub mod openrouter;
+pub mod zai;
 
 use crate::snapshot::Snapshot;
 use async_trait::async_trait;

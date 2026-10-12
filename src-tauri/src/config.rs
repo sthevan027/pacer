@@ -35,6 +35,7 @@ pub struct ProvidersConfig {
     pub openai: ProviderToggle,
     pub copilot: ProviderToggle,
     pub openrouter: ProviderToggle,
+    pub zai: ProviderToggle,
 }
 
 impl Default for ProvidersConfig {
@@ -44,6 +45,7 @@ impl Default for ProvidersConfig {
             openai: ProviderToggle { enabled: false },
             copilot: ProviderToggle { enabled: false },
             openrouter: ProviderToggle { enabled: false },
+            zai: ProviderToggle { enabled: false },
         }
     }
 }
@@ -106,6 +108,7 @@ impl Config {
             "openai" => self.providers.openai.enabled,
             "copilot" => self.providers.copilot.enabled,
             "openrouter" => self.providers.openrouter.enabled,
+            "zai" => self.providers.zai.enabled,
             _ => false,
         }
     }
@@ -187,6 +190,16 @@ mod tests {
         assert!(!load(&p).provider_enabled("openrouter"));
         fs::write(&p, r#"{"providers":{"openrouter":{"enabled":true}}}"#).unwrap();
         assert!(load(&p).provider_enabled("openrouter"));
+    }
+
+    #[test]
+    fn zai_starts_disabled_and_can_be_enabled() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        fs::write(&p, r#"{"providers":{"openrouter":{"enabled":true}}}"#).unwrap();
+        assert!(!load(&p).provider_enabled("zai"));
+        fs::write(&p, r#"{"providers":{"zai":{"enabled":true}}}"#).unwrap();
+        assert!(load(&p).provider_enabled("zai"));
     }
 
     #[test]

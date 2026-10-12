@@ -14,8 +14,8 @@ function snap(provider: string, notice: Snapshot["notice"] = null): Snapshot {
 }
 
 describe("PROVIDERS", () => {
-  it("lists claude first, then openai, copilot and openrouter", () => {
-    expect(PROVIDERS.map((p) => p.id)).toEqual(["claude", "openai", "copilot", "openrouter"]);
+  it("lists claude first, then openai, copilot, openrouter and z.ai", () => {
+    expect(PROVIDERS.map((p) => p.id)).toEqual(["claude", "openai", "copilot", "openrouter", "zai"]);
   });
 });
 
@@ -82,6 +82,16 @@ describe("openrouter texts", () => {
   });
 });
 
+describe("z.ai texts", () => {
+  it("points to the Claude Code settings or ZAI_API_KEY and to no other provider", () => {
+    const z = PROVIDERS.find((p) => p.id === "zai")!;
+    expect(z.noDataNote).toContain("ANTHROPIC_AUTH_TOKEN");
+    expect(z.noDataNote).toContain("ZAI_API_KEY");
+    expect(z.noDataNote).not.toMatch(/Codex|GitHub|OpenRouter/);
+    expect(providerStatus(z, snap("zai"), true).text).toBe("Conectado via token do z.ai");
+  });
+});
+
 describe("hoverWindows", () => {
   const w = (id: string) => ({ id, label: id, usedPct: 10, resetsAt: null, pace: null });
 
@@ -131,11 +141,11 @@ describe("notice texts", () => {
 });
 
 describe("withProviderEnabled", () => {
-  const providers: Config["providers"] = { claude: { enabled: true }, openai: { enabled: false }, copilot: { enabled: false }, openrouter: { enabled: false } };
+  const providers: Config["providers"] = { claude: { enabled: true }, openai: { enabled: false }, copilot: { enabled: false }, openrouter: { enabled: false }, zai: { enabled: false } };
 
   it("changes only the chosen provider and keeps the others", () => {
-    expect(withProviderEnabled(providers, "openai", true)).toEqual({ claude: { enabled: true }, openai: { enabled: true }, copilot: { enabled: false }, openrouter: { enabled: false } });
-    expect(withProviderEnabled(providers, "claude", false)).toEqual({ claude: { enabled: false }, openai: { enabled: false }, copilot: { enabled: false }, openrouter: { enabled: false } });
+    expect(withProviderEnabled(providers, "openai", true)).toEqual({ claude: { enabled: true }, openai: { enabled: true }, copilot: { enabled: false }, openrouter: { enabled: false }, zai: { enabled: false } });
+    expect(withProviderEnabled(providers, "claude", false)).toEqual({ claude: { enabled: false }, openai: { enabled: false }, copilot: { enabled: false }, openrouter: { enabled: false }, zai: { enabled: false } });
   });
 
   it("does not mutate the original", () => {
