@@ -13,7 +13,8 @@ export function installerUrl(release?: ReleaseInfo): string {
   return release?.installer?.url ?? FALLBACK_INSTALLER_URL;
 }
 
-const API_URL = `https://api.github.com/repos/${REPO}/releases?per_page=4`;
+/* per_page alto o bastante pra que betas/alphas (filtrados em parseReleases) não esvaziem a lista de finais. */
+const API_URL = `https://api.github.com/repos/${REPO}/releases?per_page=10`;
 const CACHE_KEY = "pacer:releases:v1";
 
 export interface ReleaseInfo {
