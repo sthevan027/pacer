@@ -82,7 +82,8 @@ export default function PanelView() {
     };
   }, [load]);
 
-  const snap = state?.snapshots[0];
+  // O cabeçalho fala dos logs do Claude (é de onde vêm os dados do painel), não de outro provedor.
+  const snap = state?.snapshots.find((s) => s.provider === "claude");
   const corDe = useCallback(
     (f: string) => (report ? colorOf(report, f) : "var(--accent)"),
     [report],

@@ -27,12 +27,7 @@ export function ProviderCard({ snap, now }: { snap: Snapshot; now: number }) {
       ) : (
         snap.windows.map((w) => <UsageBar key={w.id} w={w} now={now} />)
       )}
-      {def?.sourceNote && snap.notice !== "noCredentials" && (
-        <p className="muted note">
-          {def.sourceNote}
-          {snap.fetchedAt ? ` Último dado: ${formatAgo(snap.fetchedAt, now)}.` : ""}
-        </p>
-      )}
+      {def?.sourceNote && snap.notice !== "noCredentials" && <p className="muted note">{def.sourceNote}</p>}
       {snap.notice && snap.notice !== "noCredentials" && (
         <div className="warnline">
           <Icon name="alert" size={13} />

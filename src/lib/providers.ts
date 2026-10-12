@@ -69,6 +69,12 @@ export function pickActive(snapshots: Snapshot[], chosen: string | null): Snapsh
   return snapshots.find((s) => s.provider === chosen) ?? snapshots[0];
 }
 
+/** Provedor com a janela mais cheia: a mesma regra do anel da bandeja. Empate fica com o primeiro. */
+export function worstSnapshot(snapshots: Snapshot[]): Snapshot | undefined {
+  const peak = (s: Snapshot) => Math.max(0, ...s.windows.map((w) => w.usedPct));
+  return snapshots.reduce<Snapshot | undefined>((best, s) => (!best || peak(s) > peak(best) ? s : best), undefined);
+}
+
 /** Liga/desliga um provedor sem perder os outros (o `save_config` troca o objeto inteiro). */
 export function withProviderEnabled(providers: Config["providers"], id: ProviderId, enabled: boolean): Config["providers"] {
   return { ...providers, [id]: { enabled } };

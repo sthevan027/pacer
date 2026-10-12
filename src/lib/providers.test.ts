@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROVIDERS, pickActive, providerStatus, withProviderEnabled } from "./providers";
+import { PROVIDERS, pickActive, providerStatus, withProviderEnabled, worstSnapshot } from "./providers";
 import type { Config, Snapshot } from "./types";
 
 const claude = PROVIDERS.find((p) => p.id === "claude")!;
@@ -58,6 +58,23 @@ describe("pickActive", () => {
 
   it("is undefined when no provider is active", () => {
     expect(pickActive([], "claude")).toBeUndefined();
+  });
+});
+
+describe("worstSnapshot", () => {
+  const withUse = (provider: string, pct: number): Snapshot => ({
+    ...snap(provider),
+    windows: [{ id: "five_hour", label: "Sessão (5h)", usedPct: pct, resetsAt: null, pace: null }],
+  });
+
+  it("picks the provider with the highest window, like the tray ring", () => {
+    expect(worstSnapshot([withUse("claude", 20), withUse("openai", 95)])?.provider).toBe("openai");
+    expect(worstSnapshot([withUse("claude", 60), withUse("openai", 30)])?.provider).toBe("claude");
+  });
+
+  it("keeps the first on a tie and is undefined without snapshots", () => {
+    expect(worstSnapshot([withUse("claude", 0), snap("openai")])?.provider).toBe("claude");
+    expect(worstSnapshot([])).toBeUndefined();
   });
 });
 

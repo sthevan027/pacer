@@ -37,6 +37,7 @@ pub fn codex_dir() -> PathBuf {
 const MAX_FILES: usize = 5;
 /// Só o fim do arquivo interessa: o `token_count` mais novo é um dos últimos eventos.
 const TAIL_BYTES: u64 = 512 * 1024;
+const MAX_WINDOW_MINUTES: i64 = 365 * 24 * 60;
 
 fn collect_rollouts(dir: &Path, out: &mut Vec<(SystemTime, PathBuf)>) {
     let Ok(entries) = fs::read_dir(dir) else { return };
@@ -72,15 +73,21 @@ fn window_of(v: &Value) -> Option<LimitWindow> {
     if !used.is_finite() {
         return None;
     }
+    // Duração absurda (arquivo corrompido) vira 0 = "Limite" sem projeção; um ano já é folga demais.
+    let minutes = v.get("window_minutes").and_then(Value::as_i64).filter(|m| (1..=MAX_WINDOW_MINUTES).contains(m)).unwrap_or(0);
     Some(LimitWindow {
         used_pct: used.clamp(0.0, 100.0),
-        minutes: v.get("window_minutes").and_then(Value::as_i64).unwrap_or(0),
+        minutes,
         resets_at: v.get("resets_at").and_then(Value::as_i64).and_then(|s| Utc.timestamp_opt(s, 0).single()),
     })
 }
 
 /// Uma linha do rollout → `RateLimits`, se for um `token_count` com limites.
 fn parse_line(line: &str) -> Option<RateLimits> {
+    // a maioria das linhas é conversa grande: nem parseia o que não é token_count
+    if !line.contains("token_count") {
+        return None;
+    }
     let v: Value = serde_json::from_str(line).ok()?;
     if v.get("type")?.as_str()? != "event_msg" {
         return None;
@@ -102,14 +109,20 @@ fn parse_line(line: &str) -> Option<RateLimits> {
 }
 
 /// Último `rate_limits` conhecido dentro de `<codex_dir>/sessions`, ou `None` se não houver nada legível.
+/// Entre os rollouts mais recentes vale o evento mais novo, não o arquivo mexido por último: com
+/// duas sessões abertas, uma pode ter gravado outra coisa depois sem ter um `token_count` mais novo.
 pub fn latest(codex_dir: &Path) -> Option<RateLimits> {
     let mut files = Vec::new();
     collect_rollouts(&codex_dir.join("sessions"), &mut files);
     files.sort_by(|a, b| b.0.cmp(&a.0));
-    files.iter().take(MAX_FILES).find_map(|(_, path)| {
-        let text = read_tail(path)?;
-        text.lines().rev().find_map(parse_line)
-    })
+    files
+        .iter()
+        .take(MAX_FILES)
+        .filter_map(|(_, path)| read_tail(path)?.lines().rev().find_map(parse_line))
+        .fold(None, |best: Option<RateLimits>, r| match best {
+            Some(b) if b.at >= r.at => Some(b),
+            _ => Some(r),
+        })
 }
 
 #[cfg(test)]
@@ -181,6 +194,26 @@ mod tests {
         assert_eq!(r.windows.len(), 1, "janela sem used_percent não entra");
         assert_eq!(r.windows[0].used_pct, 100.0);
         assert_eq!(r.windows[0].resets_at, None);
+    }
+
+    #[test]
+    fn absurd_window_length_is_dropped_to_zero_minutes() {
+        let d = tempfile::tempdir().unwrap();
+        let line = r#"{"timestamp":"2026-10-12T14:00:00.000Z","type":"event_msg","payload":{"type":"token_count","rate_limits":{"primary":{"used_percent":10.0,"window_minutes":9000000000000000000}}}}"#;
+        fs::write(day_dir(d.path()).join("rollout-x.jsonl"), line).unwrap();
+        assert_eq!(latest(d.path()).unwrap().windows[0].minutes, 0);
+    }
+
+    #[test]
+    fn the_most_recent_event_wins_even_if_its_file_was_touched_earlier() {
+        let d = tempfile::tempdir().unwrap();
+        let dir = day_dir(d.path());
+        // sessão A tem o evento mais novo (14:05), mas o arquivo da B foi mexido depois com um evento mais velho
+        fs::write(dir.join("rollout-a.jsonl"), FIXTURE).unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(30));
+        let older = FIXTURE.replace("2026-10-12T14:05:00.000Z", "2026-10-12T13:00:00.000Z").replace("42.5", "11.0");
+        fs::write(dir.join("rollout-b.jsonl"), older).unwrap();
+        assert_eq!(latest(d.path()).unwrap().windows[0].used_pct, 42.5);
     }
 
     #[test]

@@ -49,6 +49,10 @@ As decisões da seção 6 do spec ainda não foram respondidas. Este plano assum
 
 ## Tarefa 3: Módulo OpenAI/Codex
 
+> **Decidido em 2026-10-12:** só dados locais (rollouts do Codex). Não há `creds.rs`, `api.rs` nem `TokenExpired`: o
+> módulo é `openai/{mod.rs,rollout.rs}` e o "remoto" é reler o arquivo. Pesquisa em `2026-10-12-openai-codex-pesquisa.md`.
+> Ainda a conferir com um rollout real do Codex: o papel de `limit_id` em `rate_limits`.
+
 **Objetivo:** o provedor OpenAI/Codex aparece no widget com janelas de uso, quando a credencial local existir.
 
 - [ ] **Passo 0 — pesquisa (obrigatória):** na documentação oficial do OpenAI/Codex, confirmar:
