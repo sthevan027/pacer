@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROVIDERS, providerStatus, withProviderEnabled } from "./providers";
+import { PROVIDERS, pickActive, providerStatus, withProviderEnabled } from "./providers";
 import type { Config, Snapshot } from "./types";
 
 const claude = PROVIDERS.find((p) => p.id === "claude")!;
@@ -41,6 +41,41 @@ describe("providerStatus", () => {
   it("keeps connected while only rate limited or offline (data is still there)", () => {
     expect(providerStatus(claude, snap("claude", "rateLimited"), true).connected).toBe(true);
     expect(providerStatus(claude, snap("claude", "offline"), true).connected).toBe(true);
+  });
+});
+
+describe("pickActive", () => {
+  const two = [snap("claude"), snap("openai")];
+
+  it("picks the requested provider", () => {
+    expect(pickActive(two, "openai")?.provider).toBe("openai");
+  });
+
+  it("falls back to the first when nothing was chosen or the choice is gone", () => {
+    expect(pickActive(two, null)?.provider).toBe("claude");
+    expect(pickActive([snap("openai")], "claude")?.provider).toBe("openai");
+  });
+
+  it("is undefined when no provider is active", () => {
+    expect(pickActive([], "claude")).toBeUndefined();
+  });
+});
+
+describe("notice texts", () => {
+  it("each provider explains its own missing source", () => {
+    expect(claude.noDataNote).toContain("Claude Code");
+    expect(openai.noDataNote).toContain("Codex");
+    expect(openai.noDataNote).not.toContain("Claude");
+  });
+
+  it("only the local-only provider carries the source note", () => {
+    expect(claude.sourceNote).toBeUndefined();
+    expect(openai.sourceNote).toMatch(/neste PC/);
+  });
+
+  it("offline and expired texts never name another provider's company", () => {
+    expect(openai.offlineText).not.toMatch(/Anthropic|Claude/);
+    expect(claude.offlineText).toContain("Anthropic");
   });
 });
 

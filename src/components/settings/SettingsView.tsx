@@ -1,9 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { ClaudeLogo, Icon } from "../../icons/icons";
+import { Icon } from "../../icons/icons";
 import { PROVIDERS, providerStatus, withProviderEnabled } from "../../lib/providers";
 import type { AppState, Config } from "../../lib/types";
 import { Header } from "../Header";
+import { ProviderMark } from "../ProviderMark";
 import { AccentPicker } from "./AccentPicker";
 import { RateInput } from "./RateInput";
 import { Row } from "./Row";
@@ -88,7 +89,9 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
           const status = providerStatus(p, snap, enabled);
           return (
             <div className="prov" key={p.id}>
-              <div className={`plogo${p.id === "claude" ? "" : " neutral"}`}>{p.id === "claude" ? <ClaudeLogo /> : <Icon name="plug" size={14} />}</div>
+              <div className={`plogo${p.id === "claude" ? "" : " neutral"}`}>
+                <ProviderMark id={p.id} />
+              </div>
               <div className="lbl grow">
                 <b>
                   {p.name} {snap?.plan && <span className="muted">· {snap.plan}</span>}

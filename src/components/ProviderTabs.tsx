@@ -1,16 +1,16 @@
-import { ClaudeLogo } from "../icons/icons";
 import type { Snapshot } from "../lib/types";
+import { ProviderMark } from "./ProviderMark";
 
-export function ProviderTabs({ snapshots, active }: { snapshots: Snapshot[]; active: string }) {
+export function ProviderTabs({ snapshots, active, onSelect }: { snapshots: Snapshot[]; active: string; onSelect: (provider: string) => void }) {
   return (
     <div className="tabs">
       {snapshots.map((s) => {
         const max = Math.max(0, ...s.windows.map((w) => w.usedPct));
         return (
-          <span key={s.provider} className={`tab${s.provider === active ? " on" : ""}`}>
-            <ClaudeLogo size={13} />
+          <button key={s.provider} type="button" title={s.name} className={`tab${s.provider === active ? " on" : ""}`} onClick={() => onSelect(s.provider)}>
+            <ProviderMark id={s.provider} size={13} />
             {s.windows.length ? `${Math.round(max)}%` : "—"}
-          </span>
+          </button>
         );
       })}
     </div>
