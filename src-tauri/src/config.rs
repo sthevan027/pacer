@@ -27,10 +27,21 @@ impl Default for ProviderToggle {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ProvidersConfig {
     pub claude: ProviderToggle,
+    /// Provedor novo da Etapa B: nasce desligado, mesmo em config antiga sem essa chave.
+    pub openai: ProviderToggle,
+}
+
+impl Default for ProvidersConfig {
+    fn default() -> Self {
+        Self {
+            claude: ProviderToggle { enabled: true },
+            openai: ProviderToggle { enabled: false },
+        }
+    }
 }
 
 /// Cor de destaque: substitui só o estado "ok" da escala de severidade (anel da bandeja, barras,
@@ -88,6 +99,7 @@ impl Config {
     pub fn provider_enabled(&self, id: &str) -> bool {
         match id {
             "claude" => self.providers.claude.enabled,
+            "openai" => self.providers.openai.enabled,
             _ => false,
         }
     }
@@ -130,6 +142,29 @@ mod tests {
         assert_eq!(c.refresh_minutes, 5);
         assert_eq!(c.alerts.thresholds, vec![80, 95]);
         assert!(c.start_with_windows && c.providers.claude.enabled);
+    }
+
+    #[test]
+    fn openai_starts_disabled_even_in_an_old_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        fs::write(&p, r#"{"providers":{"claude":{"enabled":true}}}"#).unwrap();
+        let c = load(&p);
+        assert!(c.provider_enabled("claude"));
+        assert!(!c.provider_enabled("openai"));
+    }
+
+    #[test]
+    fn openai_can_be_enabled() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        fs::write(&p, r#"{"providers":{"openai":{"enabled":true}}}"#).unwrap();
+        assert!(load(&p).provider_enabled("openai"));
+    }
+
+    #[test]
+    fn unknown_provider_is_never_enabled() {
+        assert!(!Config::default().provider_enabled("cursor"));
     }
 
     #[test]
