@@ -127,11 +127,13 @@ pub struct ReportFilter {
     pub range_days: i64,
     /// Vazio = todas as famílias.
     pub families: Vec<String>,
+    /// Vazio = todos os provedores.
+    pub providers: Vec<String>,
 }
 
 impl Default for ReportFilter {
     fn default() -> Self {
-        Self { range_days: DAYS, families: Vec::new() }
+        Self { range_days: DAYS, families: Vec::new(), providers: Vec::new() }
     }
 }
 
@@ -196,6 +198,9 @@ pub struct UsageReport {
     /// Famílias presentes no período, **sem** aplicar o filtro — é com isso que a UI monta os chips.
     pub available_families: Vec<String>,
     pub filtered_families: Vec<String>,
+    /// Provedores com consumo no período, sem aplicar o filtro (mesma lógica das famílias).
+    pub available_providers: Vec<String>,
+    pub filtered_providers: Vec<String>,
     /// Um item por dia do período, do mais antigo pro mais recente (dias vazios entram zerados).
     pub days: Vec<DaySlice>,
     pub by_model: Vec<ModelTotal>,
@@ -281,11 +286,19 @@ impl UsageStore {
             date >= first && date <= today
         };
 
-        // As famílias disponíveis saem do período inteiro, antes do filtro: senão, ao filtrar
-        // por uma família, os chips das outras sumiriam e não daria pra voltar.
+        let by_provider = |e: &UsageEvent| filter.providers.is_empty() || filter.providers.iter().any(|p| p == e.provider);
+
+        // Os provedores disponíveis saem do período inteiro, antes de qualquer filtro.
+        let mut providers: Vec<String> = self.events().filter(|e| in_window(e)).map(|e| e.provider.to_string()).collect();
+        providers.sort();
+        providers.dedup();
+
+        // As famílias disponíveis saem do período inteiro, antes do filtro de família: senão, ao
+        // filtrar por uma, os chips das outras sumiriam e não daria pra voltar. Só entram as dos
+        // provedores escolhidos, para não oferecer um chip que não casa com nada.
         let mut available: Vec<String> = self
             .events()
-            .filter(|e| in_window(e))
+            .filter(|e| in_window(e) && by_provider(e))
             .map(|e| family(&e.model).to_string())
             .collect();
         available.sort_by_key(|f| family_rank(f));
@@ -293,6 +306,7 @@ impl UsageStore {
 
         let selected = |e: &UsageEvent| {
             in_window(e)
+                && by_provider(e)
                 && (filter.families.is_empty() || filter.families.iter().any(|f| f == family(&e.model)))
         };
 
@@ -413,6 +427,8 @@ impl UsageStore {
             generated_at: Utc::now(),
             available_families: available,
             filtered_families: filter.families.clone(),
+            available_providers: providers,
+            filtered_providers: filter.providers.clone(),
             days,
             by_model: models,
             totals,
@@ -530,7 +546,7 @@ mod tests {
     #[test]
     fn report_covers_the_whole_range_with_empty_days() {
         let r = store(vec![ev(at(2026, 10, 10, 9), "claude-sonnet-5", "s", "p", 10, 5)])
-            .report(&ReportFilter { range_days: 7, families: vec![] }, now(), 5.0);
+            .report(&ReportFilter { range_days: 7, families: vec![], providers: vec![] }, now(), 5.0);
         assert_eq!(r.days.len(), 7);
         assert_eq!(r.days[0].date, NaiveDate::from_ymd_opt(2026, 10, 4).unwrap());
         assert_eq!(r.days[6].date, NaiveDate::from_ymd_opt(2026, 10, 10).unwrap());
@@ -545,9 +561,9 @@ mod tests {
             ev(at(2026, 10, 10, 9), "claude-sonnet-5", "s", "p", 10, 0),
             ev(at(2026, 10, 1, 9), "claude-sonnet-5", "s", "p", 999, 0),
         ]);
-        let r = s.report(&ReportFilter { range_days: 7, families: vec![] }, now(), 5.0);
+        let r = s.report(&ReportFilter { range_days: 7, families: vec![], providers: vec![] }, now(), 5.0);
         assert_eq!(r.totals.input, 10);
-        let r30 = s.report(&ReportFilter { range_days: 30, families: vec![] }, now(), 5.0);
+        let r30 = s.report(&ReportFilter { range_days: 30, families: vec![], providers: vec![] }, now(), 5.0);
         assert_eq!(r30.totals.input, 1009);
     }
 
@@ -557,7 +573,7 @@ mod tests {
             ev(at(2026, 10, 10, 9), "claude-opus-5-5", "s", "p", 100, 0),
             ev(at(2026, 10, 10, 10), "claude-sonnet-5", "s", "p", 50, 0),
         ]);
-        let r = s.report(&ReportFilter { range_days: 7, families: vec![] }, now(), 5.0);
+        let r = s.report(&ReportFilter { range_days: 7, families: vec![], providers: vec![] }, now(), 5.0);
         let day = &r.days[6];
         assert_eq!(day.by_family.len(), 2);
         // ordem canônica: opus antes de sonnet
@@ -567,12 +583,48 @@ mod tests {
     }
 
     #[test]
+    fn provider_filter_separates_events_and_keeps_the_other_chips_available() {
+        let mut openai = ev(at(2026, 10, 10, 10), "modelo-do-codex", "s2", "q", 40, 0);
+        openai.provider = "openai";
+        let s = store(vec![ev(at(2026, 10, 10, 9), "claude-opus-5-5", "s", "p", 100, 0), openai]);
+
+        let todos = s.report(&ReportFilter::default(), now(), 5.0);
+        assert_eq!(todos.totals.input, 140);
+        assert_eq!(todos.available_providers, vec!["claude", "openai"]);
+
+        let so_codex = s.report(&ReportFilter { range_days: 7, families: vec![], providers: vec!["openai".into()] }, now(), 5.0);
+        assert_eq!(so_codex.totals.input, 40);
+        assert_eq!(so_codex.request_count, 1);
+        assert_eq!(so_codex.filtered_providers, vec!["openai"]);
+        // os chips de provedor continuam inteiros, senão não daria pra voltar
+        assert_eq!(so_codex.available_providers, vec!["claude", "openai"]);
+        // e os de família só mostram o que o provedor escolhido tem
+        assert_eq!(so_codex.available_families, vec!["outro"]);
+    }
+
+    #[test]
+    fn events_without_a_price_stay_out_of_the_brl_total_per_provider() {
+        let mut openai = ev(at(2026, 10, 10, 10), "modelo-do-codex", "s2", "q", 1_000_000, 0);
+        openai.provider = "openai";
+        let s = store(vec![ev(at(2026, 10, 10, 9), "claude-sonnet-5", "s", "p", 1_000_000, 0), openai]);
+
+        let so_codex = s.report(&ReportFilter { range_days: 7, families: vec![], providers: vec!["openai".into()] }, now(), 5.0);
+        assert_eq!(so_codex.total_cost_brl, 0.0);
+        assert_eq!(so_codex.unpriced_models, vec!["modelo-do-codex"]);
+        assert_eq!(so_codex.by_model[0].cost_brl, None);
+
+        // o total geral só soma o que tem preço (US$ 2 × 5,00)
+        let todos = s.report(&ReportFilter::default(), now(), 5.0);
+        assert!((todos.total_cost_brl - 10.0).abs() < 1e-9);
+    }
+
+    #[test]
     fn filtering_by_family_keeps_the_other_chips_available() {
         let s = store(vec![
             ev(at(2026, 10, 10, 9), "claude-opus-5-5", "s", "p", 100, 0),
             ev(at(2026, 10, 10, 10), "claude-sonnet-5", "s", "p", 50, 0),
         ]);
-        let r = s.report(&ReportFilter { range_days: 7, families: vec!["opus".into()] }, now(), 5.0);
+        let r = s.report(&ReportFilter { range_days: 7, families: vec!["opus".into()], providers: vec![] }, now(), 5.0);
         assert_eq!(r.totals.input, 100);
         // os chips continuam mostrando as duas famílias, senão não daria pra voltar
         assert_eq!(r.available_families, vec!["opus", "sonnet"]);

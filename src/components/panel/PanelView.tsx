@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "../../icons/icons";
 import { formatAgo } from "../../lib/format";
 import { useNow, usePacer } from "../../lib/hooks";
-import type { Range, UsageReport } from "../../lib/usage";
+import { toggleIn, type Range, type UsageReport } from "../../lib/usage";
 import { Filters } from "./Filters";
 import { Ranks } from "./Ranks";
 import { RequestsTable } from "./RequestsTable";
@@ -28,6 +28,7 @@ export default function PanelView() {
   const [report, setReport] = useState<UsageReport | null>(null);
   const [range, setRange] = useState<Range>(30);
   const [selected, setSelected] = useState<string[]>([]);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [metric, setMetric] = useState<"tokens" | "cacheRead" | "cacheWrite" | "total">("tokens");
   const [tab, setTab] = useState<Tab>("overview");
   const [busy, setBusy] = useState(true);
@@ -39,6 +40,7 @@ export default function PanelView() {
   const jaAbriu = useRef(false);
 
   const chave = selected.join(",");
+  const chaveProvedores = selectedProviders.join(",");
   const load = useCallback(async () => {
     const minha = ++geracao.current;
     setBusy(true);
@@ -46,6 +48,7 @@ export default function PanelView() {
       const r = await invoke<UsageReport>("get_usage_report", {
         rangeDays: range,
         families: chave ? chave.split(",") : [],
+        providers: chaveProvedores ? chaveProvedores.split(",") : [],
       });
       if (minha !== geracao.current) return;
       setReport(r);
@@ -55,7 +58,7 @@ export default function PanelView() {
     } finally {
       if (minha === geracao.current) setBusy(false);
     }
-  }, [range, chave]);
+  }, [range, chave, chaveProvedores]);
 
   useEffect(() => {
     void load();
@@ -85,9 +88,8 @@ export default function PanelView() {
     [report],
   );
 
-  const onToggleFamily = (f: string) => {
-    setSelected((s) => (s.includes(f) ? s.filter((x) => x !== f) : [...s, f]));
-  };
+  const onToggleFamily = (f: string) => setSelected((s) => toggleIn(s, f));
+  const onToggleProvider = (p: string) => setSelectedProviders((s) => toggleIn(s, p));
 
   const exportar = async () => {
     setAviso(null);
@@ -95,6 +97,7 @@ export default function PanelView() {
       const path = await invoke<string>("export_usage_csv", {
         rangeDays: range,
         families: chave ? chave.split(",") : [],
+        providers: chaveProvedores ? chaveProvedores.split(",") : [],
       });
       setAviso(path);
       await revealItemInDir(path);
@@ -138,6 +141,9 @@ export default function PanelView() {
         available={report?.availableFamilies ?? []}
         selected={selected}
         onToggleFamily={onToggleFamily}
+        availableProviders={report?.availableProviders ?? []}
+        selectedProviders={selectedProviders}
+        onToggleProvider={onToggleProvider}
         colorOfFamily={corDe}
         busy={busy}
       />

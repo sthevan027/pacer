@@ -60,13 +60,14 @@ pub async fn get_usage_report(
     shared: State<'_, Arc<Shared>>,
     range_days: i64,
     families: Vec<String>,
+    providers: Option<Vec<String>>,
 ) -> Result<UsageReport, String> {
     let shared = shared.inner().clone();
     let usd_brl = shared.config.lock().unwrap().usd_brl;
     // Agregar 30 dias de eventos é rápido, mas não pode travar a thread principal.
     tauri::async_runtime::spawn_blocking(move || {
         let store = shared.usage.lock().unwrap();
-        store.report(&ReportFilter { range_days, families }, Local::now(), usd_brl)
+        store.report(&ReportFilter { range_days, families, providers: providers.unwrap_or_default() }, Local::now(), usd_brl)
     })
     .await
     .map_err(|e| e.to_string())
@@ -80,6 +81,7 @@ pub async fn export_usage_csv(
     shared: State<'_, Arc<Shared>>,
     range_days: i64,
     families: Vec<String>,
+    providers: Option<Vec<String>>,
 ) -> Result<String, String> {
     let shared = shared.inner().clone();
     let usd_brl = shared.config.lock().unwrap().usd_brl;
@@ -87,7 +89,7 @@ pub async fn export_usage_csv(
 
     let csv = tauri::async_runtime::spawn_blocking(move || {
         let store = shared.usage.lock().unwrap();
-        report_csv(&store.report(&ReportFilter { range_days, families }, Local::now(), usd_brl))
+        report_csv(&store.report(&ReportFilter { range_days, families, providers: providers.unwrap_or_default() }, Local::now(), usd_brl))
     })
     .await
     .map_err(|e| e.to_string())?;

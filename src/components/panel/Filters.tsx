@@ -1,4 +1,5 @@
 import { familyLabel } from "../../lib/families";
+import { providerDef } from "../../lib/providers";
 import { METRICS, RANGES, type Metric, type Range } from "../../lib/usage";
 
 interface Props {
@@ -9,11 +10,17 @@ interface Props {
   available: string[];
   selected: string[];
   onToggleFamily: (f: string) => void;
+  availableProviders: string[];
+  selectedProviders: string[];
+  onToggleProvider: (p: string) => void;
   colorOfFamily: (f: string) => string;
   busy: boolean;
 }
 
-export function Filters({ range, onRange, metric, onMetric, available, selected, onToggleFamily, colorOfFamily, busy }: Props) {
+export function Filters({
+  range, onRange, metric, onMetric, available, selected, onToggleFamily,
+  availableProviders, selectedProviders, onToggleProvider, colorOfFamily, busy,
+}: Props) {
   return (
     <div className={`pnfilters${busy ? " busy" : ""}`}>
       <div className="pnseg">
@@ -23,6 +30,20 @@ export function Filters({ range, onRange, metric, onMetric, available, selected,
           </button>
         ))}
       </div>
+
+      {availableProviders.length > 1 && (
+        <div className="pntiers">
+          {availableProviders.map((p) => {
+            const on = selectedProviders.length === 0 || selectedProviders.includes(p);
+            const name = providerDef(p)?.name ?? p;
+            return (
+              <button key={p} className={`pnchip${on ? " on" : ""}`} onClick={() => onToggleProvider(p)} title={on ? `Esconder ${name}` : `Mostrar ${name}`}>
+                {name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="pntiers">
         {available.length === 0 ? (
