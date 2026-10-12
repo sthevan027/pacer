@@ -1,0 +1,7 @@
+[build]
+  base = "site"
+  command = "npm install -g bun && bun install --frozen-lockfile && bun run build"
+  publish = "site/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
