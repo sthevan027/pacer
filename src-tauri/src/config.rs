@@ -34,6 +34,7 @@ pub struct ProvidersConfig {
     /// Provedor novo da Etapa B: nasce desligado, mesmo em config antiga sem essa chave.
     pub openai: ProviderToggle,
     pub copilot: ProviderToggle,
+    pub openrouter: ProviderToggle,
 }
 
 impl Default for ProvidersConfig {
@@ -42,6 +43,7 @@ impl Default for ProvidersConfig {
             claude: ProviderToggle { enabled: true },
             openai: ProviderToggle { enabled: false },
             copilot: ProviderToggle { enabled: false },
+            openrouter: ProviderToggle { enabled: false },
         }
     }
 }
@@ -103,6 +105,7 @@ impl Config {
             "claude" => self.providers.claude.enabled,
             "openai" => self.providers.openai.enabled,
             "copilot" => self.providers.copilot.enabled,
+            "openrouter" => self.providers.openrouter.enabled,
             _ => false,
         }
     }
@@ -174,6 +177,16 @@ mod tests {
         assert!(c.provider_enabled("openai") && !c.provider_enabled("copilot"));
         fs::write(&p, r#"{"providers":{"copilot":{"enabled":true}}}"#).unwrap();
         assert!(load(&p).provider_enabled("copilot"));
+    }
+
+    #[test]
+    fn openrouter_starts_disabled_and_can_be_enabled() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("config.json");
+        fs::write(&p, r#"{"providers":{"copilot":{"enabled":true}}}"#).unwrap();
+        assert!(!load(&p).provider_enabled("openrouter"));
+        fs::write(&p, r#"{"providers":{"openrouter":{"enabled":true}}}"#).unwrap();
+        assert!(load(&p).provider_enabled("openrouter"));
     }
 
     #[test]

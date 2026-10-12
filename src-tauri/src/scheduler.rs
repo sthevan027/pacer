@@ -3,6 +3,7 @@ use crate::config::Config;
 use crate::providers::claude::{creds, ClaudeProvider};
 use crate::providers::copilot::CopilotProvider;
 use crate::providers::openai::{rollout, OpenAiProvider};
+use crate::providers::openrouter::OpenRouterProvider;
 use crate::providers::{FetchResult, Provider};
 use crate::snapshot::Snapshot;
 use crate::state::Shared;
@@ -124,6 +125,7 @@ pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
             new_slot(Box::new(ClaudeProvider::new(creds::claude_dir(), shared.usage.clone()))),
             new_slot(Box::new(OpenAiProvider::new(rollout::codex_dir()))),
             new_slot(Box::new(CopilotProvider::new())),
+            new_slot(Box::new(OpenRouterProvider::new())),
         ];
         let mut alert_state = AlertState::default();
 

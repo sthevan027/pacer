@@ -14,8 +14,8 @@ function snap(provider: string, notice: Snapshot["notice"] = null): Snapshot {
 }
 
 describe("PROVIDERS", () => {
-  it("lists claude first, then openai and copilot", () => {
-    expect(PROVIDERS.map((p) => p.id)).toEqual(["claude", "openai", "copilot"]);
+  it("lists claude first, then openai, copilot and openrouter", () => {
+    expect(PROVIDERS.map((p) => p.id)).toEqual(["claude", "openai", "copilot", "openrouter"]);
   });
 });
 
@@ -73,6 +73,15 @@ describe("copilot texts", () => {
   });
 });
 
+describe("openrouter texts", () => {
+  it("explains the env var and never mentions another provider", () => {
+    const o = PROVIDERS.find((p) => p.id === "openrouter")!;
+    expect(o.noDataNote).toContain("OPENROUTER_API_KEY");
+    expect(o.noDataNote).not.toMatch(/Claude|Codex|GitHub/);
+    expect(providerStatus(o, undefined, true).text).toContain("OPENROUTER_API_KEY");
+  });
+});
+
 describe("hoverWindows", () => {
   const w = (id: string) => ({ id, label: id, usedPct: 10, resetsAt: null, pace: null });
 
@@ -122,11 +131,11 @@ describe("notice texts", () => {
 });
 
 describe("withProviderEnabled", () => {
-  const providers: Config["providers"] = { claude: { enabled: true }, openai: { enabled: false }, copilot: { enabled: false } };
+  const providers: Config["providers"] = { claude: { enabled: true }, openai: { enabled: false }, copilot: { enabled: false }, openrouter: { enabled: false } };
 
   it("changes only the chosen provider and keeps the others", () => {
-    expect(withProviderEnabled(providers, "openai", true)).toEqual({ claude: { enabled: true }, openai: { enabled: true }, copilot: { enabled: false } });
-    expect(withProviderEnabled(providers, "claude", false)).toEqual({ claude: { enabled: false }, openai: { enabled: false }, copilot: { enabled: false } });
+    expect(withProviderEnabled(providers, "openai", true)).toEqual({ claude: { enabled: true }, openai: { enabled: true }, copilot: { enabled: false }, openrouter: { enabled: false } });
+    expect(withProviderEnabled(providers, "claude", false)).toEqual({ claude: { enabled: false }, openai: { enabled: false }, copilot: { enabled: false }, openrouter: { enabled: false } });
   });
 
   it("does not mutate the original", () => {

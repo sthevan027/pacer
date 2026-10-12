@@ -1,6 +1,6 @@
 import type { Config, Notice, Snapshot, UsageWindow } from "./types";
 
-export type ProviderId = "claude" | "openai" | "copilot";
+export type ProviderId = "claude" | "openai" | "copilot" | "openrouter";
 
 export interface ProviderDef {
   id: ProviderId;
@@ -48,6 +48,16 @@ export const PROVIDERS: readonly ProviderDef[] = [
       "Não achei o login do GitHub neste PC. Instale o GitHub CLI e rode `gh auth login` — o Pacer pega sozinho. Contas sem Copilot também caem aqui.",
     tokenExpiredText: "O login do GitHub expirou. Rode `gh auth login` no terminal.",
     offlineText: "Sem conexão com o GitHub.",
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    connectedText: "Conectado via OPENROUTER_API_KEY",
+    missingText: "Sem a variável OPENROUTER_API_KEY",
+    noDataNote:
+      "Não achei a variável `OPENROUTER_API_KEY` neste PC. Defina-a nas variáveis de ambiente do usuário e reabra o Pacer. A chave fica só no seu computador.",
+    tokenExpiredText: "O OpenRouter recusou a chave. Confira o valor de OPENROUTER_API_KEY.",
+    offlineText: "Sem conexão com o OpenRouter.",
   },
 ];
 
