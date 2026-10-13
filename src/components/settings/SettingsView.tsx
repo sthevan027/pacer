@@ -5,6 +5,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { Icon } from "../../icons/icons";
 import { PROVIDERS, providerStatus, withProviderEnabled } from "../../lib/providers";
 import type { AppState, Config } from "../../lib/types";
+import type { UseUpdateStatus } from "../../lib/useUpdateStatus";
 import { Header } from "../Header";
 import { KeyField } from "./KeyField";
 import { ProviderMark } from "../ProviderMark";
@@ -14,11 +15,20 @@ import { Row } from "./Row";
 import { Segmented } from "./Segmented";
 import { ThresholdBar } from "./ThresholdBar";
 import { Toggle } from "./Toggle";
+import { UpdateRow } from "./UpdateRow";
 
 const REPO_URL = "https://github.com/sthevan027/pacer";
 const REFRESH_OPTIONS = [1, 5, 10] as const;
 
-export function SettingsView({ state, onBack }: { state: AppState; onBack: () => void }) {
+export function SettingsView({
+  state,
+  onBack,
+  update,
+}: {
+  state: AppState;
+  onBack: () => void;
+  update: UseUpdateStatus;
+}) {
   const cfg = state.config;
   const save = (patch: Partial<Config>) => invoke<Config>("save_config", { config: { ...cfg, ...patch } });
 
@@ -121,6 +131,14 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
           <Icon name="plus" size={13} />
           Adicionar provedor <span className="dim">(em breve)</span>
         </div>
+      </section>
+
+      <section className="sec">
+        <div className="sh">
+          <Icon name="download" />
+          Atualizações
+        </div>
+        <UpdateRow update={update} />
       </section>
 
       <div className="foot">

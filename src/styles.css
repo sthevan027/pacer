@@ -177,6 +177,11 @@ button.tab { background: none; border: 0; font: inherit; font-weight: 600; curso
 .keyhint a { color: var(--accent-2); text-decoration: none; }
 .keyhint a:hover { text-decoration: underline; }
 .ghost { display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px dashed #30363d; border-radius: 6px; padding: 7px; color: var(--dim); margin: 2px 0 10px; }
+.updbtn { padding: 4px 11px; border-radius: 7px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--text); font-weight: 600; font-size: 11px; white-space: nowrap; }
+.updbtn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-2); }
+.updbtn:disabled { opacity: 0.55; cursor: default; }
+.updbtn:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.upderr { margin: 0 0 8px; font-size: 11px; color: var(--crit); }
 
 /* ---------------- painel de uso ----------------
    Janela separada (`?view=panel`), opaca e decorada ao contrário do widget: por isso o
