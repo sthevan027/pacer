@@ -12,7 +12,9 @@
   --ok: #3fb950;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: transparent; overflow: hidden; }
+html, body { margin: 0; background: transparent; overflow-x: hidden; overflow-y: auto; }
+/* A janela nunca passa da tela (window.rs::fit_height): o que sobrar rola, com barra fina. */
+html { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.22) transparent; }
 body {
   font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   font-size: 12px;
