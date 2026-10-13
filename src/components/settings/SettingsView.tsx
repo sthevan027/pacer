@@ -1,9 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
+import { Fragment } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Icon } from "../../icons/icons";
 import { PROVIDERS, providerStatus, withProviderEnabled } from "../../lib/providers";
 import type { AppState, Config } from "../../lib/types";
 import { Header } from "../Header";
+import { KeyField } from "./KeyField";
 import { ProviderMark } from "../ProviderMark";
 import { AccentPicker } from "./AccentPicker";
 import { RateInput } from "./RateInput";
@@ -88,7 +90,8 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
           const enabled = cfg.providers[p.id].enabled;
           const status = providerStatus(p, snap, enabled);
           return (
-            <div className="prov" key={p.id}>
+            <Fragment key={p.id}>
+            <div className="prov">
               <div className={`plogo${p.id === "claude" ? "" : " neutral"}`}>
                 <ProviderMark id={p.id} />
               </div>
@@ -103,6 +106,14 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
               </div>
               <Toggle label={p.name} on={enabled} onChange={(v) => save({ providers: withProviderEnabled(cfg.providers, p.id, v) })} />
             </div>
+            {p.apiKey && (
+              <KeyField
+                provider={p}
+                stored={state.storedKeys.includes(p.id)}
+                onSaved={() => !enabled && save({ providers: withProviderEnabled(cfg.providers, p.id, true) })}
+              />
+            )}
+            </Fragment>
           );
         })}
         <div className="ghost">

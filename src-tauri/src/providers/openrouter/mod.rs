@@ -4,8 +4,10 @@ use crate::pacing;
 use crate::providers::{FetchResult, Provider};
 use crate::snapshot::{Notice, Snapshot, UsageWindow};
 use api::{ApiError, ApiWindow};
+use crate::secrets::SecretStore;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use std::sync::Arc;
 
 pub const PROVIDER_ID: &str = "openrouter";
 const KEY_ENV: &str = "OPENROUTER_API_KEY";
@@ -14,10 +16,14 @@ const KEY_ENV: &str = "OPENROUTER_API_KEY";
 /// ambiente do processo.
 pub type KeySource = Box<dyn Fn() -> Option<String> + Send + Sync>;
 
-/// A chave vem da variável de ambiente do usuário (o padrão das ferramentas do OpenRouter);
-/// o Pacer não pede nem guarda chave digitada.
+/// Variável de ambiente do usuário (o padrão das ferramentas do OpenRouter).
 pub fn env_key() -> Option<String> {
     std::env::var(KEY_ENV).ok().map(|k| k.trim().to_string()).filter(|k| !k.is_empty())
+}
+
+/// A chave colada no Pacer (Gerenciador de Credenciais) vale mais que a variável de ambiente.
+pub fn key_from(store: Arc<dyn SecretStore>, env: fn() -> Option<String>) -> KeySource {
+    Box::new(move || store.get(PROVIDER_ID).or_else(env))
 }
 
 /// Período já virado desde a última busca: o dado antigo não vale mais.
@@ -51,8 +57,8 @@ pub struct OpenRouterProvider {
 }
 
 impl OpenRouterProvider {
-    pub fn new() -> Self {
-        Self::with(Box::new(env_key), api::KEY_URL.into())
+    pub fn new(store: Arc<dyn SecretStore>) -> Self {
+        Self::with(key_from(store, env_key), api::KEY_URL.into())
     }
 
     pub fn with(key: KeySource, url: String) -> Self {
@@ -205,5 +211,15 @@ mod tests {
         p.tick_local(now + chrono::Duration::days(45));
         let s = p.snapshot();
         assert_eq!((s.windows[0].used_pct, s.windows[0].resets_at), (0.0, None));
+    }
+
+    #[test]
+    fn a_pasted_key_wins_over_the_environment() {
+        let store = Arc::new(crate::secrets::MemoryStore::default());
+        let from = |s: &Arc<crate::secrets::MemoryStore>, env: fn() -> Option<String>| key_from(s.clone(), env)();
+        assert_eq!(from(&store, || Some("do-ambiente".into())).as_deref(), Some("do-ambiente"));
+        assert_eq!(from(&store, || None), None);
+        store.set(PROVIDER_ID, "colada").unwrap();
+        assert_eq!(from(&store, || Some("do-ambiente".into())).as_deref(), Some("colada"));
     }
 }

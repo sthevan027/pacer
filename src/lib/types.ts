@@ -53,4 +53,6 @@ export interface AppState {
   snapshots: Snapshot[];
   config: Config;
   version: string;
+  /** Provedores com chave de API guardada no Windows (só os ids; o valor nunca chega aqui). */
+  storedKeys: string[];
 }

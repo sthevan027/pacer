@@ -15,6 +15,8 @@ export interface ProviderDef {
   offlineText: string;
   /** Aviso fixo do card para provedores que só leem dados locais. */
   sourceNote?: string;
+  /** Provedor que aceita chave de API colada nas Configurações (guardada no cofre do Windows). */
+  apiKey?: { placeholder: string; getUrl: string; getLabel: string };
 }
 
 export const PROVIDERS: readonly ProviderDef[] = [
@@ -52,22 +54,24 @@ export const PROVIDERS: readonly ProviderDef[] = [
   {
     id: "openrouter",
     name: "OpenRouter",
-    connectedText: "Conectado via OPENROUTER_API_KEY",
-    missingText: "Sem a variável OPENROUTER_API_KEY",
+    connectedText: "Conectado com a chave de API",
+    missingText: "Cole a chave de API",
     noDataNote:
-      "Não achei a variável `OPENROUTER_API_KEY` neste PC. Defina-a nas variáveis de ambiente do usuário e reabra o Pacer. A chave fica só no seu computador.",
-    tokenExpiredText: "O OpenRouter recusou a chave. Confira o valor de OPENROUTER_API_KEY.",
+      "Cole sua chave de API do OpenRouter em Configurações → Provedores. Ela fica guardada no Gerenciador de Credenciais do Windows, só neste PC. A variável `OPENROUTER_API_KEY` também vale.",
+    tokenExpiredText: "O OpenRouter recusou a chave. Cole uma chave nova em Configurações → Provedores.",
     offlineText: "Sem conexão com o OpenRouter.",
+    apiKey: { placeholder: "sk-or-v1-…", getUrl: "https://openrouter.ai/keys", getLabel: "Criar chave no OpenRouter" },
   },
   {
     id: "zai",
     name: "z.ai GLM",
-    connectedText: "Conectado via token do z.ai",
-    missingText: "Sem token do z.ai",
+    connectedText: "Conectado com a chave de API",
+    missingText: "Cole a chave de API",
     noDataNote:
-      "Não achei um token do z.ai neste PC. Se você usa o GLM pelo Claude Code, o Pacer lê o `ANTHROPIC_AUTH_TOKEN` do `settings.json`; também vale a variável `ZAI_API_KEY`.",
-    tokenExpiredText: "O z.ai recusou o token. Confira o ANTHROPIC_AUTH_TOKEN ou o ZAI_API_KEY.",
+      "Cole sua chave de API do z.ai em Configurações → Provedores. Ela fica guardada no Gerenciador de Credenciais do Windows, só neste PC. Quem usa o GLM pelo Claude Code não precisa: o Pacer lê o token do `settings.json`.",
+    tokenExpiredText: "O z.ai recusou a chave. Cole uma chave nova em Configurações → Provedores.",
     offlineText: "Sem conexão com o z.ai.",
+    apiKey: { placeholder: "chave do z.ai", getUrl: "https://z.ai/manage-apikey/apikey-list", getLabel: "Criar chave no z.ai" },
   },
 ];
 

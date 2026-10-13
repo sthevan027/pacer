@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::secrets::SecretStore;
 use crate::snapshot::Snapshot;
 use crate::usage::UsageStore;
 use std::path::PathBuf;
@@ -13,17 +14,20 @@ pub struct Shared {
     /// Eventos de consumo. O scheduler alimenta (via provedor) e o painel lê — por isso mora
     /// aqui e não dentro do provedor, que é inalcançável de um comando.
     pub usage: Arc<Mutex<UsageStore>>,
+    /// Chaves de API digitadas pelo usuário (Gerenciador de Credenciais do Windows).
+    pub secrets: Arc<dyn SecretStore>,
     pub force: AtomicBool,
     pub wake: Notify,
 }
 
 impl Shared {
-    pub fn new(config_path: PathBuf, config: Config) -> Self {
+    pub fn new(config_path: PathBuf, config: Config, secrets: Arc<dyn SecretStore>) -> Self {
         Self {
             snapshots: Mutex::new(Vec::new()),
             config: Mutex::new(config),
             config_path,
             usage: Arc::new(Mutex::new(UsageStore::new())),
+            secrets,
             force: AtomicBool::new(false),
             wake: Notify::new(),
         }

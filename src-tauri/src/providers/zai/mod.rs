@@ -5,9 +5,11 @@ use crate::pacing;
 use crate::providers::{FetchResult, Provider};
 use crate::snapshot::{Notice, Snapshot, UsageWindow};
 use api::{ApiError, ApiWindow};
+use crate::secrets::SecretStore;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use creds::Auth;
+use std::sync::Arc;
 
 pub const PROVIDER_ID: &str = "zai";
 
@@ -45,8 +47,8 @@ pub struct ZaiProvider {
 }
 
 impl ZaiProvider {
-    pub fn new() -> Self {
-        Self::with(Box::new(creds::discover), None)
+    pub fn new(store: Arc<dyn SecretStore>) -> Self {
+        Self::with(Box::new(move || creds::stored_or_discovered(&*store)), None)
     }
 
     pub fn with(auth: AuthSource, url_override: Option<String>) -> Self {

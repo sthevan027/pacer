@@ -1,4 +1,5 @@
 use crate::config::{self, Config};
+use crate::secrets;
 use crate::snapshot::Snapshot;
 use crate::state::Shared;
 use crate::usage::{report_csv, ReportFilter, UsageReport};
@@ -13,6 +14,8 @@ pub struct AppState {
     pub snapshots: Vec<Snapshot>,
     pub config: Config,
     pub version: String,
+    /// Provedores com chave de API guardada. Só os ids: o valor nunca sai do Rust.
+    pub stored_keys: Vec<String>,
 }
 
 #[tauri::command]
@@ -21,7 +24,39 @@ pub fn get_state(app: AppHandle, shared: State<'_, Arc<Shared>>) -> AppState {
         snapshots: shared.snapshots.lock().unwrap().clone(),
         config: shared.config.lock().unwrap().clone(),
         version: app.package_info().version.to_string(),
+        stored_keys: secrets::stored_ids(&*shared.secrets),
     }
+}
+
+/// Guarda a chave colada para um provedor e já pede uma busca nova. Devolve quem tem chave.
+#[tauri::command]
+pub async fn set_api_key(app: AppHandle, shared: State<'_, Arc<Shared>>, provider: String, key: String) -> Result<Vec<String>, String> {
+    let shared = shared.inner().clone();
+    // O Gerenciador de Credenciais é uma chamada do sistema: fora da thread principal.
+    let s = shared.clone();
+    tauri::async_runtime::spawn_blocking(move || secrets::save_key(&*s.secrets, &provider, &key))
+        .await
+        .map_err(|e| e.to_string())??;
+    keys_changed(&app, &shared).await
+}
+
+/// Apaga a chave guardada de um provedor.
+#[tauri::command]
+pub async fn clear_api_key(app: AppHandle, shared: State<'_, Arc<Shared>>, provider: String) -> Result<Vec<String>, String> {
+    let shared = shared.inner().clone();
+    let s = shared.clone();
+    tauri::async_runtime::spawn_blocking(move || secrets::remove_key(&*s.secrets, &provider))
+        .await
+        .map_err(|e| e.to_string())??;
+    keys_changed(&app, &shared).await
+}
+
+async fn keys_changed(app: &AppHandle, shared: &Arc<Shared>) -> Result<Vec<String>, String> {
+    let s = shared.clone();
+    let ids = tauri::async_runtime::spawn_blocking(move || secrets::stored_ids(&*s.secrets)).await.map_err(|e| e.to_string())?;
+    let _ = app.emit("keys", &ids);
+    shared.request_refresh();
+    Ok(ids)
 }
 
 #[tauri::command]

@@ -156,6 +156,23 @@ button.tab { background: none; border: 0; font: inherit; font-weight: 600; curso
   70% { box-shadow: 0 0 0 6px rgba(63, 185, 80, 0); }
   100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
 }
+.keyf { display: flex; flex-direction: column; gap: 5px; padding: 0 0 10px 38px; }
+.keyr { display: flex; align-items: center; gap: 6px; }
+.keyin {
+  flex: 1; min-width: 0; padding: 5px 8px; font: inherit; user-select: text;
+  color: var(--text); background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); border-radius: 7px;
+}
+.keyin:focus-visible, .keybtn:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.keybtn { padding: 5px 10px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255, 255, 255, 0.05); }
+.keybtn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
+.keybtn.pri { background: var(--accent); border-color: transparent; color: #fff; }
+.keybtn.pri:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 85%, white); }
+.keybtn:disabled { opacity: 0.5; cursor: default; }
+.keyok { flex: 1; color: var(--ok); font-size: 11px; }
+.keyerr { color: var(--crit); font-size: 11px; }
+.keyhint { color: var(--dim); font-size: 10.5px; }
+.keyhint a { color: var(--accent-2); text-decoration: none; }
+.keyhint a:hover { text-decoration: underline; }
 .ghost { display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px dashed #30363d; border-radius: 6px; padding: 7px; color: var(--dim); margin: 2px 0 10px; }
 
 /* ---------------- painel de uso ----------------

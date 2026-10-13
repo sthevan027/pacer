@@ -90,7 +90,10 @@ async fn poll_slot(s: &mut Slot, enabled: bool, forced: bool, now: DateTime<Utc>
         FetchPlan::Now => {
             let r = s.provider.fetch_remote(now).await;
             s.backoff.record(r);
-            s.last_remote = Some(now);
+            // Sem credencial não houve chamada: não segura o primeiro pedido depois que a chave for colada.
+            if r != FetchResult::Skipped {
+                s.last_remote = Some(now);
+            }
             s.next_remote = now + chrono::Duration::from_std(s.backoff.delay()).unwrap();
         }
         FetchPlan::Defer(until) => s.next_remote = s.next_remote.min(until),
@@ -126,8 +129,8 @@ pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
             new_slot(Box::new(ClaudeProvider::new(creds::claude_dir(), shared.usage.clone()))),
             new_slot(Box::new(OpenAiProvider::new(rollout::codex_dir()))),
             new_slot(Box::new(CopilotProvider::new())),
-            new_slot(Box::new(OpenRouterProvider::new())),
-            new_slot(Box::new(ZaiProvider::new())),
+            new_slot(Box::new(OpenRouterProvider::new(shared.secrets.clone()))),
+            new_slot(Box::new(ZaiProvider::new(shared.secrets.clone()))),
         ];
         let mut alert_state = AlertState::default();
 
@@ -242,6 +245,7 @@ mod tests {
     struct Fake {
         id: &'static str,
         calls: Arc<std::sync::Mutex<Calls>>,
+        result: FetchResult,
     }
 
     #[async_trait::async_trait]
@@ -254,7 +258,7 @@ mod tests {
         }
         async fn fetch_remote(&mut self, _now: DateTime<Utc>) -> FetchResult {
             self.calls.lock().unwrap().fetches += 1;
-            FetchResult::Ok
+            self.result
         }
         fn snapshot(&self) -> crate::snapshot::Snapshot {
             crate::snapshot::Snapshot {
@@ -274,7 +278,7 @@ mod tests {
 
     fn fake_slot(id: &'static str, calls: &Arc<std::sync::Mutex<Calls>>, next_remote: DateTime<Utc>) -> Slot {
         Slot {
-            provider: Box::new(Fake { id, calls: calls.clone() }),
+            provider: Box::new(Fake { id, calls: calls.clone(), result: FetchResult::Ok }),
             backoff: Backoff::new(5),
             next_remote,
             last_remote: None,
@@ -297,6 +301,17 @@ mod tests {
         assert!(poll_slot(&mut s, true, false, t(0)).await.is_some());
         let c = calls.lock().unwrap();
         assert_eq!((c.ticks, c.fetches), (1, 1));
+    }
+
+    #[tokio::test]
+    async fn a_fetch_skipped_for_lack_of_credentials_does_not_hold_back_the_next_one() {
+        let calls = Arc::new(std::sync::Mutex::new(Calls::default()));
+        let mut s = fake_slot("openrouter", &calls, t(0));
+        s.provider = Box::new(Fake { id: "openrouter", calls: calls.clone(), result: FetchResult::Skipped });
+        poll_slot(&mut s, true, true, t(0)).await;
+        // chave colada 5 s depois: o pedido forçado não pode cair no intervalo mínimo de 60 s
+        poll_slot(&mut s, true, true, t(5)).await;
+        assert_eq!(calls.lock().unwrap().fetches, 2);
     }
 
     #[tokio::test]

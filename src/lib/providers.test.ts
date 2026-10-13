@@ -19,6 +19,20 @@ describe("PROVIDERS", () => {
   });
 });
 
+describe("chave de API", () => {
+  it("só OpenRouter e z.ai pedem chave colada (os mesmos ids que o Rust aceita)", () => {
+    expect(PROVIDERS.filter((p) => p.apiKey).map((p) => p.id)).toEqual(["openrouter", "zai"]);
+  });
+
+  it("cada campo diz onde conseguir a chave e não promete nada que o Pacer não faz", () => {
+    for (const p of PROVIDERS.filter((x) => x.apiKey)) {
+      expect(p.apiKey!.placeholder.length).toBeGreaterThan(3);
+      expect(p.apiKey!.getUrl).toMatch(/^https:\/\//);
+      expect(p.missingText).toMatch(/chave|token/i);
+    }
+  });
+});
+
 describe("providerStatus", () => {
   it("is off when the toggle is off, whatever the snapshot says", () => {
     expect(providerStatus(claude, snap("claude"), false)).toEqual({ connected: false, text: "Desligado" });
@@ -74,21 +88,22 @@ describe("copilot texts", () => {
 });
 
 describe("openrouter texts", () => {
-  it("explains the env var and never mentions another provider", () => {
+  it("tells the user to paste the key (env var still works) and never mentions another provider", () => {
     const o = PROVIDERS.find((p) => p.id === "openrouter")!;
+    expect(o.noDataNote).toContain("Configurações");
     expect(o.noDataNote).toContain("OPENROUTER_API_KEY");
     expect(o.noDataNote).not.toMatch(/Claude|Codex|GitHub/);
-    expect(providerStatus(o, undefined, true).text).toContain("OPENROUTER_API_KEY");
+    expect(providerStatus(o, undefined, true).text).toBe("Cole a chave de API");
   });
 });
 
 describe("z.ai texts", () => {
-  it("points to the Claude Code settings or ZAI_API_KEY and to no other provider", () => {
+  it("tells the user to paste the key or use the Claude Code settings, and to no other provider", () => {
     const z = PROVIDERS.find((p) => p.id === "zai")!;
-    expect(z.noDataNote).toContain("ANTHROPIC_AUTH_TOKEN");
-    expect(z.noDataNote).toContain("ZAI_API_KEY");
+    expect(z.noDataNote).toContain("Configurações");
+    expect(z.noDataNote).toContain("settings.json");
     expect(z.noDataNote).not.toMatch(/Codex|GitHub|OpenRouter/);
-    expect(providerStatus(z, snap("zai"), true).text).toBe("Conectado via token do z.ai");
+    expect(providerStatus(z, snap("zai"), true).text).toBe("Conectado com a chave de API");
   });
 });
 

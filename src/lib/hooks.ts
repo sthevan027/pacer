@@ -8,10 +8,12 @@ export function usePacer(): AppState | null {
   useEffect(() => {
     invoke<AppState>("get_state").then(setState);
     const offSnap = listen<Snapshot[]>("snapshot", (e) => setState((s) => (s ? { ...s, snapshots: e.payload } : s)));
+    const offKeys = listen<string[]>("keys", (e) => setState((s) => (s ? { ...s, storedKeys: e.payload } : s)));
     const offCfg = listen<Config>("config", (e) => setState((s) => (s ? { ...s, config: e.payload } : s)));
     return () => {
       offSnap.then((f) => f());
       offCfg.then((f) => f());
+      offKeys.then((f) => f());
     };
   }, []);
   return state;

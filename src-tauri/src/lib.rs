@@ -5,6 +5,7 @@ pub mod pacing;
 pub mod panel;
 pub mod providers;
 pub mod scheduler;
+pub mod secrets;
 pub mod snapshot;
 pub mod state;
 pub mod tray;
@@ -22,7 +23,7 @@ pub fn run() {
         .setup(|app| {
             let config_path = app.path().app_config_dir()?.join("config.json");
             let cfg = config::load(&config_path);
-            let shared = Arc::new(state::Shared::new(config_path, cfg.clone()));
+            let shared = Arc::new(state::Shared::new(config_path, cfg.clone(), Arc::new(secrets::KeyringStore)));
             app.manage(shared.clone());
 
             let win = app.get_webview_window("main").expect("janela main");
@@ -54,6 +55,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
             commands::save_config,
+            commands::set_api_key,
+            commands::clear_api_key,
             commands::refresh_now,
             commands::hide_window,
             commands::open_panel,

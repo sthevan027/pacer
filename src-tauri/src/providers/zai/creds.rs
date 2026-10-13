@@ -2,6 +2,7 @@
 //! e `ANTHROPIC_AUTH_TOKEN` (em `~/.claude/settings.json`, bloco `env`, ou no ambiente), e é o que
 //! o plugin oficial do z.ai lê. Também aceita `ZAI_API_KEY`/`ZHIPU_API_KEY`. Só leitura.
 
+use crate::secrets::SecretStore;
 use serde_json::Value;
 
 #[derive(Clone, PartialEq)]
@@ -54,6 +55,12 @@ pub fn find(env: &dyn Fn(&str) -> Option<String>, settings: Option<&Value>) -> O
         }
     }
     None
+}
+
+/// A chave colada no Pacer vale mais que tudo o que `discover` acha. Vai para o domínio
+/// internacional (`api.z.ai`); quem usa a conta chinesa mantém o token no `settings.json`.
+pub fn stored_or_discovered(store: &dyn SecretStore) -> Option<Auth> {
+    store.get("zai").map(|token| Auth { token, domain: ZAI.into() }).or_else(discover)
 }
 
 pub fn discover() -> Option<Auth> {
@@ -109,6 +116,14 @@ mod tests {
     fn process_environment_is_the_last_resort() {
         let a = find(&env_of(&[("ANTHROPIC_AUTH_TOKEN", "e"), ("ANTHROPIC_BASE_URL", "https://open.bigmodel.cn/api/anthropic")]), None).unwrap();
         assert_eq!((a.token.as_str(), a.domain.as_str()), ("e", ZHIPU));
+    }
+
+    #[test]
+    fn a_pasted_key_wins_and_goes_to_the_international_domain() {
+        let store = crate::secrets::MemoryStore::default();
+        store.set("zai", "colada").unwrap();
+        let a = stored_or_discovered(&store).unwrap();
+        assert_eq!((a.token.as_str(), a.domain.as_str()), ("colada", ZAI));
     }
 
     #[test]
