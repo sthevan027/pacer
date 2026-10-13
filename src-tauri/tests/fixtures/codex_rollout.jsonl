@@ -1,0 +1,6 @@
+{"timestamp":"2026-10-12T14:00:00.000Z","type":"session_meta","payload":{"id":"00000000-0000-0000-0000-000000000000","cwd":"D:\\Projetos\\exemplo"}}
+{"timestamp":"2026-10-12T14:01:00.000Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{"primary":{"used_percent":10.0,"window_minutes":300,"resets_at":1790000000},"secondary":{"used_percent":5.0,"window_minutes":10080,"resets_at":1790500000},"plan_type":"plus"}}}
+{"timestamp":"2026-10-12T14:02:00.000Z","type":"event_msg","payload":{"type":"agent_message","message":"oi"}}
+{"timestamp":"2026-10-12T14:05:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000}},"rate_limits":{"primary":{"used_percent":42.5,"window_minutes":300,"resets_at":1790010000},"secondary":{"used_percent":18.0,"window_minutes":10080,"resets_at":1790600000},"plan_type":"plus"}}}
+{"timestamp":"2026-10-12T14:06:00.000Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":null}}
+linha quebrada que nao e json

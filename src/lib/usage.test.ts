@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { billableTokens, cacheWrite, EMPTY_TOTALS, metricValue, totalTokens, type Totals } from "./usage";
+import { billableTokens, cacheWrite, EMPTY_TOTALS, metricValue, toggleIn, totalTokens, type Totals } from "./usage";
 
 const t = (patch: Partial<Totals> = {}): Totals => ({ ...EMPTY_TOTALS, ...patch });
 
@@ -33,5 +33,18 @@ describe("metricValue", () => {
 
   it("métrica zerada não vira NaN", () => {
     expect(metricValue(EMPTY_TOTALS, "total")).toBe(0);
+  });
+});
+
+describe("toggleIn", () => {
+  it("adds an item that is not there and removes one that is", () => {
+    expect(toggleIn(["opus"], "sonnet")).toEqual(["opus", "sonnet"]);
+    expect(toggleIn(["opus", "sonnet"], "opus")).toEqual(["sonnet"]);
+  });
+
+  it("does not mutate the list it received", () => {
+    const list = ["opus"];
+    toggleIn(list, "sonnet");
+    expect(list).toEqual(["opus"]);
   });
 });

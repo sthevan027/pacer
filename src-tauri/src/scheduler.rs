@@ -1,6 +1,12 @@
 use crate::alerts::{self, AlertState};
+use crate::config::Config;
 use crate::providers::claude::{creds, ClaudeProvider};
+use crate::providers::copilot::CopilotProvider;
+use crate::providers::openai::{rollout, OpenAiProvider};
+use crate::providers::openrouter::OpenRouterProvider;
+use crate::providers::zai::ZaiProvider;
 use crate::providers::{FetchResult, Provider};
+use crate::snapshot::Snapshot;
 use crate::state::Shared;
 use chrono::{DateTime, Utc};
 use std::sync::Arc;
@@ -73,15 +79,59 @@ struct Slot {
     last_remote: Option<DateTime<Utc>>,
 }
 
+/// Uma volta do laço para um provedor. Desligado não é tocado (nem leitura local, nem API) e
+/// devolve `None`. Ligado: sempre atualiza a parte local e busca na API só quando o plano manda.
+async fn poll_slot(s: &mut Slot, enabled: bool, forced: bool, now: DateTime<Utc>) -> Option<Snapshot> {
+    if !enabled {
+        return None;
+    }
+    s.provider.tick_local(now);
+    match plan_fetch(forced, now, s.next_remote, s.last_remote) {
+        FetchPlan::Now => {
+            let r = s.provider.fetch_remote(now).await;
+            s.backoff.record(r);
+            // Sem credencial não houve chamada: não segura o primeiro pedido depois que a chave for colada.
+            if r != FetchResult::Skipped {
+                s.last_remote = Some(now);
+            }
+            s.next_remote = now + chrono::Duration::from_std(s.backoff.delay()).unwrap();
+        }
+        FetchPlan::Defer(until) => s.next_remote = s.next_remote.min(until),
+        FetchPlan::Wait => {}
+    }
+    let mut snap = s.provider.snapshot();
+    snap.next_refresh_at = Some(s.next_remote);
+    Some(snap)
+}
+
+/// Uma volta completa: consulta a lista inteira e devolve só os snapshots dos provedores ligados.
+async fn poll_all(slots: &mut [Slot], cfg: &Config, forced: bool, now: DateTime<Utc>) -> Vec<Snapshot> {
+    let mut snaps = Vec::new();
+    for s in slots.iter_mut() {
+        let enabled = cfg.provider_enabled(s.provider.id());
+        if let Some(snap) = poll_slot(s, enabled, forced, now).await {
+            snaps.push(snap);
+        }
+    }
+    snaps
+}
+
 pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
     tauri::async_runtime::spawn(async move {
         let mut refresh = shared.config.lock().unwrap().refresh_minutes;
-        let mut slots = vec![Slot {
-            provider: Box::new(ClaudeProvider::new(creds::claude_dir(), shared.usage.clone())),
+        let new_slot = |provider: Box<dyn Provider>| Slot {
+            provider,
             backoff: Backoff::new(refresh),
             next_remote: Utc::now(),
             last_remote: None,
-        }];
+        };
+        let mut slots = vec![
+            new_slot(Box::new(ClaudeProvider::new(creds::claude_dir(), shared.usage.clone()))),
+            new_slot(Box::new(OpenAiProvider::new(rollout::codex_dir()))),
+            new_slot(Box::new(CopilotProvider::new())),
+            new_slot(Box::new(OpenRouterProvider::new(shared.secrets.clone()))),
+            new_slot(Box::new(ZaiProvider::new(shared.secrets.clone()))),
+        ];
         let mut alert_state = AlertState::default();
 
         loop {
@@ -96,28 +146,11 @@ pub fn spawn(app: AppHandle, shared: Arc<Shared>) {
                 }
             }
 
-            let mut snaps = Vec::new();
-            for s in &mut slots {
-                if !cfg.provider_enabled(s.provider.id()) {
-                    continue;
-                }
-                s.provider.tick_local(now);
-                match plan_fetch(forced, now, s.next_remote, s.last_remote) {
-                    FetchPlan::Now => {
-                        let r = s.provider.fetch_remote(now).await;
-                        s.backoff.record(r);
-                        s.last_remote = Some(now);
-                        s.next_remote = now + chrono::Duration::from_std(s.backoff.delay()).unwrap();
-                    }
-                    FetchPlan::Defer(until) => s.next_remote = s.next_remote.min(until),
-                    FetchPlan::Wait => {}
-                }
-                let mut snap = s.provider.snapshot();
-                snap.next_refresh_at = Some(s.next_remote);
-                for a in alert_state.evaluate(&snap, &cfg.alerts, now) {
+            let snaps = poll_all(&mut slots, &cfg, forced, now).await;
+            for snap in &snaps {
+                for a in alert_state.evaluate(snap, &cfg.alerts, now) {
                     alerts::notify(&app, &a);
                 }
-                snaps.push(snap);
             }
 
             crate::tray::update(&app, &snaps, &cfg.accent_color);
@@ -201,5 +234,110 @@ mod tests {
     fn forced_inside_the_minimum_gap_is_deferred_not_dropped() {
         // buscou em t=0, usuário clica "Atualizar agora" em t=30: tem que buscar em t=60, não em t=300
         assert_eq!(plan_fetch(true, t(30), t(300), Some(t(0))), FetchPlan::Defer(t(60)));
+    }
+
+    #[derive(Default)]
+    struct Calls {
+        ticks: u32,
+        fetches: u32,
+    }
+
+    struct Fake {
+        id: &'static str,
+        calls: Arc<std::sync::Mutex<Calls>>,
+        result: FetchResult,
+    }
+
+    #[async_trait::async_trait]
+    impl Provider for Fake {
+        fn id(&self) -> &'static str {
+            self.id
+        }
+        fn tick_local(&mut self, _now: DateTime<Utc>) {
+            self.calls.lock().unwrap().ticks += 1;
+        }
+        async fn fetch_remote(&mut self, _now: DateTime<Utc>) -> FetchResult {
+            self.calls.lock().unwrap().fetches += 1;
+            self.result
+        }
+        fn snapshot(&self) -> crate::snapshot::Snapshot {
+            crate::snapshot::Snapshot {
+                provider: "fake".into(),
+                name: "Fake".into(),
+                plan: None,
+                windows: vec![],
+                activity: vec![],
+                today_tokens: 0,
+                fetched_at: None,
+                next_refresh_at: None,
+                stale: false,
+                notice: None,
+            }
+        }
+    }
+
+    fn fake_slot(id: &'static str, calls: &Arc<std::sync::Mutex<Calls>>, next_remote: DateTime<Utc>) -> Slot {
+        Slot {
+            provider: Box::new(Fake { id, calls: calls.clone(), result: FetchResult::Ok }),
+            backoff: Backoff::new(5),
+            next_remote,
+            last_remote: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn disabled_provider_is_never_touched() {
+        let calls = Arc::new(std::sync::Mutex::new(Calls::default()));
+        let mut s = fake_slot("claude", &calls, t(0));
+        assert!(poll_slot(&mut s, false, true, t(0)).await.is_none());
+        let c = calls.lock().unwrap();
+        assert_eq!((c.ticks, c.fetches), (0, 0));
+    }
+
+    #[tokio::test]
+    async fn enabled_provider_fetches_when_due() {
+        let calls = Arc::new(std::sync::Mutex::new(Calls::default()));
+        let mut s = fake_slot("claude", &calls, t(0));
+        assert!(poll_slot(&mut s, true, false, t(0)).await.is_some());
+        let c = calls.lock().unwrap();
+        assert_eq!((c.ticks, c.fetches), (1, 1));
+    }
+
+    #[tokio::test]
+    async fn a_fetch_skipped_for_lack_of_credentials_does_not_hold_back_the_next_one() {
+        let calls = Arc::new(std::sync::Mutex::new(Calls::default()));
+        let mut s = fake_slot("openrouter", &calls, t(0));
+        s.provider = Box::new(Fake { id: "openrouter", calls: calls.clone(), result: FetchResult::Skipped });
+        poll_slot(&mut s, true, true, t(0)).await;
+        // chave colada 5 s depois: o pedido forçado não pode cair no intervalo mínimo de 60 s
+        poll_slot(&mut s, true, true, t(5)).await;
+        assert_eq!(calls.lock().unwrap().fetches, 2);
+    }
+
+    #[tokio::test]
+    async fn enabled_provider_only_ticks_locally_when_not_due() {
+        let calls = Arc::new(std::sync::Mutex::new(Calls::default()));
+        let mut s = fake_slot("claude", &calls, t(300));
+        assert!(poll_slot(&mut s, true, false, t(100)).await.is_some());
+        let c = calls.lock().unwrap();
+        assert_eq!((c.ticks, c.fetches), (1, 0));
+    }
+
+    #[tokio::test]
+    async fn poll_all_only_returns_and_touches_enabled_providers() {
+        // Config padrão: claude ligado, openai desligado. Os dois estão na lista do scheduler.
+        let cfg = Config::default();
+        let claude_calls = Arc::new(std::sync::Mutex::new(Calls::default()));
+        let openai_calls = Arc::new(std::sync::Mutex::new(Calls::default()));
+        let mut slots = vec![
+            fake_slot("claude", &claude_calls, t(0)),
+            fake_slot("openai", &openai_calls, t(0)),
+        ];
+        let snaps = poll_all(&mut slots, &cfg, false, t(0)).await;
+        assert_eq!(snaps.len(), 1);
+        assert_eq!(snaps[0].provider, "fake");
+        assert_eq!(claude_calls.lock().unwrap().fetches, 1);
+        let o = openai_calls.lock().unwrap();
+        assert_eq!((o.ticks, o.fetches), (0, 0));
     }
 }

@@ -67,6 +67,9 @@ export interface UsageReport {
   /** Famílias do período, sem aplicar o filtro — é com isso que os chips são montados. */
   availableFamilies: string[];
   filteredFamilies: string[];
+  /** Provedores com consumo no período, sem aplicar o filtro (chips de provedor). */
+  availableProviders: string[];
+  filteredProviders: string[];
   days: DaySlice[];
   byModel: ModelTotal[];
   totals: Totals;
@@ -85,6 +88,11 @@ export type Range = (typeof RANGES)[number];
 
 /** Espelha `RECENT_LIMIT` em src-tauri/src/usage/mod.rs: quantas requisições a tabela recebe. */
 export const RECENT_LIMIT = 200;
+
+/** Liga o item se ele não está na lista, desliga se está (chips de filtro). */
+export function toggleIn(list: string[], item: string): string[] {
+  return list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
+}
 
 /** O log separa a escrita de cache em 5 min e 1 h; na tela somem numa coisa só. */
 export function cacheWrite(t: Totals): number {

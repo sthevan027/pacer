@@ -1,8 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
+import { type CSSProperties, Fragment } from "react";
+import { providerColor } from "../../icons/providerLogos";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { ClaudeLogo, Icon } from "../../icons/icons";
+import { Icon } from "../../icons/icons";
+import { PROVIDERS, providerStatus, withProviderEnabled } from "../../lib/providers";
 import type { AppState, Config } from "../../lib/types";
 import { Header } from "../Header";
+import { KeyField } from "./KeyField";
+import { ProviderMark } from "../ProviderMark";
 import { AccentPicker } from "./AccentPicker";
 import { RateInput } from "./RateInput";
 import { Row } from "./Row";
@@ -16,8 +21,6 @@ const REFRESH_OPTIONS = [1, 5, 10] as const;
 export function SettingsView({ state, onBack }: { state: AppState; onBack: () => void }) {
   const cfg = state.config;
   const save = (patch: Partial<Config>) => invoke<Config>("save_config", { config: { ...cfg, ...patch } });
-  const claude = state.snapshots.find((s) => s.provider === "claude");
-  const connected = !!claude && claude.notice !== "noCredentials" && claude.notice !== "tokenExpired";
 
   return (
     <>
@@ -83,27 +86,37 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
           <Icon name="plug" />
           Provedores
         </div>
-        <div className="prov">
-          <div className="plogo">
-            <ClaudeLogo />
-          </div>
-          <div className="lbl grow">
-            <b>
-              Claude {claude?.plan && <span className="muted">· {claude.plan}</span>}
-            </b>
-            <span>
-              {connected ? (
-                <>
-                  <i className="pulse" />
-                  Conectado via Claude Code
-                </>
-              ) : (
-                "Sem login do Claude Code"
-              )}
-            </span>
-          </div>
-          <Toggle label="Claude" on={cfg.providers.claude.enabled} onChange={(v) => save({ providers: { claude: { enabled: v } } })} />
-        </div>
+        {PROVIDERS.map((p) => {
+          const snap = state.snapshots.find((s) => s.provider === p.id);
+          const enabled = cfg.providers[p.id].enabled;
+          const status = providerStatus(p, snap, enabled);
+          return (
+            <Fragment key={p.id}>
+            <div className="prov">
+              <div className="plogo" style={{ "--pc": providerColor(p.id) } as CSSProperties}>
+                <ProviderMark id={p.id} />
+              </div>
+              <div className="lbl grow">
+                <b>
+                  {p.name} {snap?.plan && <span className="muted">· {snap.plan}</span>}
+                </b>
+                <span>
+                  {status.connected && <i className="pulse" />}
+                  {status.text}
+                </span>
+              </div>
+              <Toggle label={p.name} on={enabled} onChange={(v) => save({ providers: withProviderEnabled(cfg.providers, p.id, v) })} />
+            </div>
+            {p.apiKey && (
+              <KeyField
+                provider={p}
+                stored={state.storedKeys.includes(p.id)}
+                onSaved={() => !enabled && save({ providers: withProviderEnabled(cfg.providers, p.id, true) })}
+              />
+            )}
+            </Fragment>
+          );
+        })}
         <div className="ghost">
           <Icon name="plus" size={13} />
           Adicionar provedor <span className="dim">(em breve)</span>

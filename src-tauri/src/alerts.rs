@@ -136,6 +136,28 @@ mod tests {
     }
 
     #[test]
+    fn each_provider_has_its_own_thresholds() {
+        let mut openai = snap(85.0, None);
+        openai.provider = "openai".into();
+        openai.name = "OpenAI".into();
+        let mut st = AlertState::default();
+        // o Claude passar de 80% não consome o alerta do OpenAI (mesmo id de janela, outro provedor)
+        assert_eq!(st.evaluate(&snap(85.0, None), &cfg(), now()).len(), 1);
+        let a = st.evaluate(&openai, &cfg(), now());
+        assert_eq!(a.len(), 1);
+        assert_eq!(a[0].title, "OpenAI · Sessão (5h)");
+        // e cada um segue sem repetir
+        assert!(st.evaluate(&openai, &cfg(), now()).is_empty());
+        assert!(st.evaluate(&snap(85.0, None), &cfg(), now()).is_empty());
+        // o OpenAI cair rearma só o dele
+        openai.windows[0].used_pct = 10.0;
+        st.evaluate(&openai, &cfg(), now());
+        openai.windows[0].used_pct = 85.0;
+        assert_eq!(st.evaluate(&openai, &cfg(), now()).len(), 1);
+        assert!(st.evaluate(&snap(85.0, None), &cfg(), now()).is_empty());
+    }
+
+    #[test]
     fn jumping_past_both_thresholds_fires_both() {
         let mut st = AlertState::default();
         assert_eq!(st.evaluate(&snap(97.0, None), &cfg(), now()).len(), 2);

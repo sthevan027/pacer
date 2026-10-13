@@ -46,11 +46,13 @@ export interface Config {
   /** Cotação US$→R$ para estimar o consumo a preço de API. */
   usdBrl: number;
   alerts: AlertsConfig;
-  providers: { claude: { enabled: boolean } };
+  providers: { claude: { enabled: boolean }; openai: { enabled: boolean }; copilot: { enabled: boolean }; openrouter: { enabled: boolean }; zai: { enabled: boolean } };
 }
 
 export interface AppState {
   snapshots: Snapshot[];
   config: Config;
   version: string;
+  /** Provedores com chave de API guardada no Windows (só os ids; o valor nunca chega aqui). */
+  storedKeys: string[];
 }

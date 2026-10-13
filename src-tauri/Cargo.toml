@@ -30,6 +30,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 tokio = { version = "1", features = ["sync", "time", "macros"] }
 async-trait = "0.1"
 dirs = "6"
+keyring = { version = "3", features = ["windows-native"] }
 
 [target.'cfg(windows)'.dependencies]
 # mesmas versões que o Tauri já usa (Cargo.lock) — só para pedir ao WebView2 o modo de memória baixa
