@@ -6,3 +6,16 @@ export const PROVIDER_LOGO_PATHS: Record<string, string> = {
   openrouter: "M18.654 3.87a5.087 5.087 0 110 10.174L23.7 19.09c.64.641.187 1.737-.72 1.737H8.48a8.479 8.479 0 010-16.958h10.175zM8.479 7.26a5.087 5.087 0 100 10.176 5.087 5.087 0 000-10.175z",
   zai: "M12.105 2L9.927 4.953H.653L2.83 2h9.276zM23.254 19.048L21.078 22h-9.242l2.174-2.952h9.244zM24 2L9.264 22H0L14.736 2H24z",
 };
+
+/** Cor de cada provedor: logo e fundo do ícone seguem o mesmo padrão do Claude. */
+export const PROVIDER_COLORS: Record<string, string> = {
+  claude: "#d97757",
+  openai: "#10a37f",
+  copilot: "#a371f7",
+  openrouter: "#6467f2",
+  zai: "#4d8dff",
+};
+
+export function providerColor(id: string): string {
+  return PROVIDER_COLORS[id] ?? "#8b949e";
+}

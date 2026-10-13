@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PROVIDER_LOGO_PATHS } from "../icons/providerLogos";
+import { PROVIDER_COLORS, PROVIDER_LOGO_PATHS, providerColor } from "../icons/providerLogos";
 import { PROVIDERS, hoverWindows, pickActive, providerStatus, withProviderEnabled, worstSnapshot } from "./providers";
 import type { Config, Snapshot } from "./types";
 
@@ -25,6 +25,15 @@ describe("logos", () => {
     for (const p of PROVIDERS.filter((x) => x.id !== "claude")) {
       expect(PROVIDER_LOGO_PATHS[p.id], p.id).toMatch(/^M[\d.\-\s]/);
     }
+  });
+});
+
+describe("cores dos provedores", () => {
+  it("todo provedor tem uma cor própria em hexadecimal, todas diferentes", () => {
+    const cores = PROVIDERS.map((p) => PROVIDER_COLORS[p.id]);
+    for (const c of cores) expect(c).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(new Set(cores).size).toBe(PROVIDERS.length);
+    expect(providerColor("desconhecido")).toMatch(/^#[0-9a-f]{6}$/i);
   });
 });
 

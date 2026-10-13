@@ -151,8 +151,7 @@ button.tab { background: none; border: 0; font: inherit; font-weight: 600; curso
 .toast { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; background: #1c2128; border: 1px solid #30363d; border-radius: 6px; padding: 7px 9px; font-size: 11px; }
 .toast svg { color: var(--warn); margin-top: 1px; }
 .prov { display: flex; align-items: center; gap: 10px; padding: 9px 0; }
-.plogo { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; background: rgba(217, 119, 87, 0.14); }
-.plogo.neutral { background: rgba(139, 148, 158, 0.16); color: var(--text); }
+.plogo { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; background: color-mix(in srgb, var(--pc, #8b949e) 16%, transparent); }
 .plogo-svg { flex: none; }
 .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; margin-right: 5px; vertical-align: 1px; animation: pl 2s infinite; }
 @keyframes pl {

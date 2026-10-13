@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Fragment } from "react";
+import { type CSSProperties, Fragment } from "react";
+import { providerColor } from "../../icons/providerLogos";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Icon } from "../../icons/icons";
 import { PROVIDERS, providerStatus, withProviderEnabled } from "../../lib/providers";
@@ -92,7 +93,7 @@ export function SettingsView({ state, onBack }: { state: AppState; onBack: () =>
           return (
             <Fragment key={p.id}>
             <div className="prov">
-              <div className={`plogo${p.id === "claude" ? "" : " neutral"}`}>
+              <div className="plogo" style={{ "--pc": providerColor(p.id) } as CSSProperties}>
                 <ProviderMark id={p.id} />
               </div>
               <div className="lbl grow">
