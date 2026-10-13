@@ -81,7 +81,7 @@ export function KeyField({ provider, stored, onSaved }: Props) {
         </form>
       ) : (
         <div className="keyr">
-          <span className="keyok">Chave guardada no Windows</span>
+          <span className="keyok">Chave guardada</span>
           <button type="button" className="keybtn" disabled={busy} onClick={() => setReplacing(true)}>
             Trocar
           </button>

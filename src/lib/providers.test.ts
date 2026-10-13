@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PROVIDER_LOGO_PATHS } from "../icons/providerLogos";
 import { PROVIDERS, hoverWindows, pickActive, providerStatus, withProviderEnabled, worstSnapshot } from "./providers";
 import type { Config, Snapshot } from "./types";
 
@@ -16,6 +17,14 @@ function snap(provider: string, notice: Snapshot["notice"] = null): Snapshot {
 describe("PROVIDERS", () => {
   it("lists claude first, then openai, copilot, openrouter and z.ai", () => {
     expect(PROVIDERS.map((p) => p.id)).toEqual(["claude", "openai", "copilot", "openrouter", "zai"]);
+  });
+});
+
+describe("logos", () => {
+  it("todo provedor tem logo próprio (o Claude vem do ClaudeLogo, os outros do mapa de caminhos)", () => {
+    for (const p of PROVIDERS.filter((x) => x.id !== "claude")) {
+      expect(PROVIDER_LOGO_PATHS[p.id], p.id).toMatch(/^M[\d.\-\s]/);
+    }
   });
 });
 

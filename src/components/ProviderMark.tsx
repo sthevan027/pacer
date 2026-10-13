@@ -1,6 +1,14 @@
 import { ClaudeLogo, Icon } from "../icons/icons";
+import { PROVIDER_LOGO_PATHS } from "../icons/providerLogos";
 
-/** Logo do provedor; os que ainda não têm logo próprio usam o ícone genérico de conexão. */
+/** Logo do provedor; sem logo próprio cai no ícone genérico de conexão. */
 export function ProviderMark({ id, size = 15 }: { id: string; size?: number }) {
-  return id === "claude" ? <ClaudeLogo size={size} /> : <Icon name="plug" size={size - 1} />;
+  if (id === "claude") return <ClaudeLogo size={size} />;
+  const path = PROVIDER_LOGO_PATHS[id];
+  if (!path) return <Icon name="plug" size={size - 1} />;
+  return (
+    <svg className="plogo-svg" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" fillRule="evenodd" aria-hidden="true">
+      <path d={path} />
+    </svg>
+  );
 }
